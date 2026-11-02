@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>中国象棋</title>
 <!-- 静态托管（GitHub Pages）无法设置 COOP/COEP 响应头，用 service worker 补上，多线程 WASM 引擎才能用 SharedArrayBuffer -->
 <script src="coi-serviceworker.js"></script>
@@ -24,7 +24,7 @@
   --kai: "Kaiti SC", "STKaiti", "KaiTi", "BiauKai", var(--serif);
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { height: 100%; }
+html, body { height: 100%; touch-action: pan-x pan-y; }
 body {
   font-family: var(--serif);
   color: var(--ink);
@@ -1231,6 +1231,9 @@ const XQ = (() => {
   }
 
   for (const t of ["dragstart", "dragover", "drop"]) document.addEventListener(t, (e) => e.preventDefault());
+  // iOS Safari 无视 user-scalable=no，双指缩放需手动拦截
+  document.addEventListener("gesturestart", (e) => e.preventDefault());
+  document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
   document.getElementById("new").addEventListener("click", newGame);
   document.getElementById("undo").addEventListener("click", undo);
   toHeadBtn.addEventListener("click", snapToHead);
