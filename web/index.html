@@ -90,7 +90,7 @@ main {
   min-width: 300px;
   filter: drop-shadow(0 18px 30px rgba(60, 40, 15, .28));
 }
-#board { width: 100%; height: auto; display: block; border-radius: 10px; }
+#board { width: 100%; height: auto; display: block; border-radius: 10px; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; -webkit-tap-highlight-color: transparent; }
 .panel {
   flex: 1 1 300px;
   min-width: 260px;
@@ -900,7 +900,11 @@ const XQ = (() => {
     overlayG = el("g", {}, svg);
     piecesG = el("g", {}, svg);
     svg.addEventListener("click", (e) => {
-      if (e.target === svg || e.target.ownerSVGElement && !e.target.closest(".piece, .dot")) clearSelection();
+      const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM().inverse());
+      const cc = Math.round((pt.x - MARGIN) / CELL), rr = Math.round((pt.y - MARGIN) / CELL);
+      if (cc < 0 || cc > 8 || rr < 0 || rr > 9) { clearSelection(); return; }
+      const r = state.flip ? 9 - rr : rr, c = state.flip ? 8 - cc : cc;
+      onSquare(r * 9 + c);
     });
   }
 
@@ -933,8 +937,6 @@ const XQ = (() => {
       el("circle", { class: "ring", r: R_PIECE - 4.5, fill: "none", stroke: red ? "#a63a2a" : "#2b2620", "stroke-width": 1.2 }, g);
       const t = el("text", { fill: red ? "#a63a2a" : "#2b2620", dy: 1 }, g);
       t.textContent = CHARS[pc];
-      const idx = pieces.length;
-      g.addEventListener("click", () => onSquare(pieces[idx].square));
       pieces.push({ pc, square: s, alive: true, el: g });
     });
   }
@@ -982,8 +984,7 @@ const XQ = (() => {
       if (squarePiece[to] !== null) {
         el("circle", { cx: x, cy: y, r: R_PIECE + 3.5, class: "capture-ring", "pointer-events": "none" }, overlayG);
       } else {
-        const dot = el("circle", { cx: x, cy: y, r: 8, class: "dot" }, overlayG);
-        dot.addEventListener("click", () => doMove(m));
+        el("circle", { cx: x, cy: y, r: 8, class: "dot" }, overlayG);
       }
     }
   }
@@ -1229,6 +1230,7 @@ const XQ = (() => {
     maybeAI();
   }
 
+  for (const t of ["dragstart", "dragover", "drop"]) document.addEventListener(t, (e) => e.preventDefault());
   document.getElementById("new").addEventListener("click", newGame);
   document.getElementById("undo").addEventListener("click", undo);
   toHeadBtn.addEventListener("click", snapToHead);
