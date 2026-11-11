@@ -146,7 +146,44 @@ const MJ = (() => {
     return { fan: best.fan, cappedFan, base: 2 ** cappedFan, items: best.items }
   }
 
-  return { SUITS, suitOf, rankOf, parse, counts, rngNext, rollDie, decompose, isWin, waits, shanten, scoreHand }
+  const GANG_NOTE = { mingGang: '明杠', anGang: '暗杠', buGang: '补杠' }
+
+  const payGang = (type, kongSeat, activeSeats) =>
+    activeSeats.filter(s => s !== kongSeat).map(s => ({ kind: 'gang', from: s, to: kongSeat, amount: type === 'anGang' ? 2 : 1, note: GANG_NOTE[type] }))
+
+  const payHu = (winner, discarder, base, activeSeats) =>
+    discarder != null
+      ? [{ kind: 'hu', from: discarder, to: winner, amount: base, note: '点炮' }]
+      : activeSeats.filter(s => s !== winner).map(s => ({ kind: 'zimo', from: s, to: winner, amount: base, note: '自摸' }))
+
+  function transferGang(gangEntries, winner) {
+    if (!gangEntries.length) return []
+    const amount = gangEntries.reduce((a, e) => a + e.amount, 0)
+    return [{ kind: 'transfer', from: gangEntries[0].to, to: winner, amount, note: '呼叫转移' }]
+  }
+
+  const isHuazhu = p => p.hand.some(t => suitOf(t) === p.que) || p.melds.some(m => suitOf(m.tile) === p.que)
+
+  function maxWaitFan(p, cap) {
+    let best = -1
+    for (const t of waits(p.hand, p.que)) best = Math.max(best, scoreHand({ hand: p.hand, melds: p.melds, winTile: t }, cap).cappedFan)
+    return best
+  }
+
+  function settleDraw(players, cap) {
+    const out = []
+    const active = players.map((p, s) => s).filter(s => !players[s].won)
+    const pigs = active.filter(s => isHuazhu(players[s]))
+    const clean = active.filter(s => !pigs.includes(s))
+    const pigAmount = 2 ** (cap ?? 4)
+    for (const pig of pigs) for (const s of clean) out.push({ kind: 'huazhu', from: pig, to: s, amount: pigAmount, note: '查花猪' })
+    const fans = new Map(clean.map(s => [s, maxWaitFan(players[s], cap)]))
+    for (const loser of clean.filter(s => fans.get(s) < 0))
+      for (const s of clean.filter(s => fans.get(s) >= 0)) out.push({ kind: 'dajiao', from: loser, to: s, amount: 2 ** fans.get(s), note: '查大叫' })
+    return out
+  }
+
+  return { SUITS, suitOf, rankOf, parse, counts, rngNext, rollDie, decompose, isWin, waits, shanten, scoreHand, payGang, payHu, transferGang, isHuazhu, settleDraw }
 })()
 
 globalThis.MJ = MJ

@@ -70,3 +70,54 @@ test('番型：封顶', () => {
   assert.equal(u.cappedFan, 5)
   assert.equal(u.base, 32)
 })
+
+const sum = (es, s) => es.reduce((a, e) => a + (e.to === s ? e.amount : 0) - (e.from === s ? e.amount : 0), 0)
+
+test('杠钱', () => {
+  const a = MJ.payGang('anGang', 0, [0, 1, 2, 3])
+  assert.equal(sum(a, 0), 6)
+  assert.equal(sum(a, 1), -2)
+  const m = MJ.payGang('mingGang', 0, [0, 1, 3])
+  assert.equal(sum(m, 0), 2)
+  assert.equal(sum(m, 2), 0)
+  assert.equal(sum(MJ.payGang('buGang', 2, [0, 1, 2, 3]), 2), 3)
+})
+
+test('点炮/自摸/一炮多响', () => {
+  assert.equal(sum(MJ.payHu(1, 0, 8, [0, 1, 2, 3]), 0), -8)
+  const z = MJ.payHu(1, null, 4, [0, 1, 3])
+  assert.equal(sum(z, 1), 8)
+  assert.equal(sum(z, 2), 0)
+  const multi = [...MJ.payHu(1, 0, 2, [0, 1, 2, 3]), ...MJ.payHu(2, 0, 4, [0, 1, 2, 3])]
+  assert.equal(sum(multi, 0), -6)
+})
+
+test('呼叫转移', () => {
+  const g = MJ.payGang('anGang', 0, [0, 1, 2, 3])
+  const t = MJ.transferGang(g, 2)
+  assert.equal(t[0].kind, 'transfer')
+  assert.equal(sum([...g, ...t], 0), 0)
+  assert.equal(sum([...g, ...t], 2), 4)
+})
+
+test('查花猪/查大叫', () => {
+  const P = (hand, que, melds = []) => ({ hand: MJ.parse(hand), que, melds, won: null })
+  const players = [
+    P('123w 456w 789w 11t 55t', 2),
+    P('123w 456w 789w 11t 55b', 1),
+    P('123w 456w 789w 147t 9t', 2),
+    { ...P('111w', 2), won: { order: 1 } },
+  ]
+  const es = MJ.settleDraw(players, 3)
+  assert.equal(sum(es, 1), -16)
+  assert.equal(sum(es, 2), 7)
+  assert.equal(sum(es, 0), 9)
+  assert.equal(sum(es, 3), 0)
+  assert.equal(sum(MJ.settleDraw(players, null), 1), -32)
+})
+
+test('查大叫按听牌最大番', () => {
+  const P = (hand, que) => ({ hand: MJ.parse(hand), que, melds: [], won: null })
+  const players = [P('1112345678999w', 2), P('123w 456w 789w 147t 9t', 2), P('123w 456w 789w 147t 9t', 2), { ...P('1w', 2), won: { order: 1 } }]
+  assert.equal(sum(MJ.settleDraw(players, null), 0), 2 * 2 ** 3)
+})
