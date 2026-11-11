@@ -37,56 +37,62 @@ body {
   min-height: 100vh;
   padding: 24px 16px 40px;
 }
-.back {
-  width: min(1060px, 100%);
-  padding-bottom: 10px;
-}
-.back a {
-  font-size: .85rem;
-  letter-spacing: .12em;
-  color: var(--ink-soft);
-  text-decoration: none;
-}
-.back a:hover { color: var(--cinnabar); }
 .app-header {
   width: min(1060px, 100%);
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 14px 24px;
-  padding-bottom: 18px;
+  align-items: center;
+  gap: 4px;
+  padding-bottom: 14px;
 }
-h1 {
-  font-size: 2.1rem;
-  font-weight: 700;
-  letter-spacing: .35em;
-  text-indent: .1em;
-}
-h1 .sub {
-  font-size: .72rem;
-  letter-spacing: .5em;
+.back {
+  font-size: 1.6rem;
+  line-height: 1;
+  padding: 0 6px 3px 0;
   color: var(--ink-soft);
-  margin-left: 1.2em;
-  vertical-align: .35em;
+  text-decoration: none;
 }
-.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.back:hover { color: var(--cinnabar); }
+h1 {
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: .3em;
+  color: var(--ink-soft);
+  margin-right: auto;
+  white-space: nowrap;
+}
+.controls { display: flex; align-items: center; gap: 10px; }
 .controls label { font-size: .85rem; color: var(--ink-soft); letter-spacing: .12em; }
 select, button {
   font-family: var(--serif);
   font-size: .9rem;
   color: var(--ink);
-  background: var(--ivory);
-  border: 1px solid #c9b489;
-  border-radius: 6px;
+  background: linear-gradient(180deg, #fbf5e6, var(--ivory));
+  border: 1px solid #cdb88d;
+  border-radius: 8px;
   padding: 7px 12px;
+  white-space: nowrap;
   cursor: pointer;
-  transition: border-color .15s, box-shadow .15s, transform .1s;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 1px 2px rgba(80, 55, 20, .12);
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color .15s, box-shadow .15s, transform .1s, background .15s;
+}
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 28px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b6355' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 11px center,
+    linear-gradient(180deg, #fbf5e6, var(--ivory));
 }
 select:hover, button:hover { border-color: var(--wood-frame); }
-button:active { transform: translateY(1px); }
-button.primary { background: var(--cinnabar); border-color: var(--cinnabar-deep); color: var(--ivory); }
-button.primary:hover { background: var(--cinnabar-deep); }
+button:active { transform: translateY(1px); box-shadow: inset 0 1px 3px rgba(80, 55, 20, .2); }
+button.primary {
+  background: linear-gradient(180deg, #b44331, var(--cinnabar-deep));
+  border-color: var(--cinnabar-deep);
+  color: var(--ivory);
+  box-shadow: inset 0 1px 0 rgba(255, 220, 200, .3), 0 1px 3px rgba(120, 30, 20, .3);
+}
+button.primary:hover { background: linear-gradient(180deg, #a63a2a, #7a281d); }
 main {
   width: min(1060px, 100%);
   display: flex;
@@ -97,7 +103,7 @@ main {
 }
 .board-wrap {
   /* 宽度同时受容器与视口高度约束，保证棋盘不出首屏（580/640 ≈ 0.906） */
-  flex: 0 1 min(620px, calc((100vh - 200px) * 0.906));
+  flex: 0 1 min(620px, calc((100vh - 150px) * 0.906));
   min-width: 300px;
   filter: drop-shadow(0 18px 30px rgba(60, 40, 15, .28));
 }
@@ -111,20 +117,27 @@ main {
   gap: 14px;
 }
 .status {
-  background: var(--ivory);
-  border: 1px solid #d5c49d;
-  border-left: 4px solid var(--cinnabar);
-  border-radius: 8px;
-  padding: 13px 16px;
-  font-size: 1rem;
-  letter-spacing: .1em;
-  min-height: 3em;
+  padding: 4px 2px;
+  font-size: 1.05rem;
+  letter-spacing: .12em;
+  min-height: 2.2em;
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.status.black-turn { border-left-color: var(--ink); }
-.status.over { border-left-color: var(--jade); font-weight: 700; }
+.status::before {
+  content: "";
+  flex: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--cinnabar);
+  box-shadow: inset 0 0 0 2.5px #f4e6c8, 0 0 0 1px var(--cinnabar), 0 1px 2px rgba(60, 40, 15, .3);
+  transition: background .2s, box-shadow .2s;
+}
+.status.black-turn::before { background: var(--ink); box-shadow: inset 0 0 0 2.5px #f4e6c8, 0 0 0 1px var(--ink), 0 1px 2px rgba(60, 40, 15, .3); }
+.status.over::before { background: var(--jade); box-shadow: inset 0 0 0 2.5px #f4e6c8, 0 0 0 1px var(--jade); }
+.status:has(.spinner)::before { display: none; }
+.status.over { font-weight: 700; }
 .spinner {
   width: 14px; height: 14px;
   border: 2px solid rgba(43, 38, 32, .2);
@@ -135,20 +148,21 @@ main {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .record {
-  background: var(--ivory);
-  border: 1px solid #d5c49d;
-  border-radius: 8px;
+  background: rgba(250, 243, 226, .7);
+  border: 1px solid rgba(170, 140, 90, .3);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(80, 55, 20, .06);
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 .record h2 {
-  font-size: .82rem;
+  font-size: .78rem;
   letter-spacing: .4em;
   color: var(--ink-soft);
   font-weight: 400;
   padding: 10px 16px 8px;
-  border-bottom: 1px solid #e3d6b4;
+  border-bottom: 1px solid rgba(170, 140, 90, .22);
 }
 #movelist {
   list-style: none;
@@ -163,6 +177,7 @@ main {
   align-items: center;
   padding: 0 14px;
 }
+#movelist li:nth-child(even) { background: rgba(140, 105, 50, .045); }
 #movelist .no { color: var(--ink-soft); font-size: .8rem; text-align: right; padding-right: .8em; }
 #movelist .ply {
   padding: 5px 10px;
@@ -173,14 +188,19 @@ main {
 }
 #movelist .ply:hover { background: rgba(166, 58, 42, .09); }
 #movelist .ply.current { background: rgba(166, 58, 42, .16); font-weight: 700; }
-#movelist .empty { grid-column: 1 / -1; color: var(--ink-soft); text-align: center; padding: 18px 0; font-size: .85rem; letter-spacing: .2em; }
+#movelist .empty { grid-column: 1 / -1; color: rgba(107, 99, 85, .75); text-align: center; padding: 8px 0; font-size: .82rem; letter-spacing: .2em; }
 #tohead { align-self: center; margin: 4px 0 10px; font-size: .82rem; padding: 5px 14px; }
-footer { margin-top: 26px; font-size: .75rem; color: var(--ink-soft); letter-spacing: .25em; }
+footer { margin-top: 26px; font-size: .72rem; color: rgba(107, 99, 85, .7); letter-spacing: .08em; }
 
 /* SVG 内元素 */
-.piece { cursor: pointer; transition: transform .18s ease-out; }
-.piece circle.body { transition: filter .15s; }
-.piece:hover circle.body { filter: brightness(1.05); }
+.piece { cursor: pointer; transition: transform .18s ease-out; -webkit-tap-highlight-color: transparent; }
+.piece .shadow { fill: rgba(45, 25, 5, .3); transition: transform .15s ease-out, opacity .15s; }
+.piece .face { transition: transform .15s ease-out; }
+.piece circle.body { transition: filter .15s, stroke .15s; }
+.piece:hover circle.body { filter: brightness(1.04); }
+.piece.selected .face { transform: translateY(-4px); }
+.piece.selected .shadow { transform: translateY(2px); opacity: .55; }
+.piece.selected circle.body { stroke: var(--jade); stroke-width: 2.5; }
 .piece text {
   font-family: var(--kai);
   font-size: 30px;
@@ -191,7 +211,6 @@ footer { margin-top: 26px; font-size: .75rem; color: var(--ink-soft); letter-spa
   user-select: none;
 }
 .piece.dead { display: none; }
-.piece.selected circle.ring { stroke: var(--jade); stroke-width: 2.5; }
 .piece.in-check circle.body { animation: checkpulse .9s ease-in-out infinite; }
 @keyframes checkpulse {
   0%, 100% { filter: none; }
@@ -200,8 +219,8 @@ footer { margin-top: 26px; font-size: .75rem; color: var(--ink-soft); letter-spa
 .dot { fill: var(--jade); opacity: .55; cursor: pointer; transition: opacity .12s; }
 .dot:hover { opacity: .95; }
 .capture-ring { fill: none; stroke: var(--jade); stroke-width: 2.5; stroke-dasharray: 5 4; opacity: .8; cursor: pointer; }
-.lastmove { fill: none; stroke: rgba(166, 58, 42, .55); stroke-width: 2; }
-.board-label { font-family: var(--serif); font-size: 15px; fill: rgba(80, 55, 25, .75); text-anchor: middle; }
+.lastmove { fill: none; stroke: rgba(166, 58, 42, .75); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.board-label { font-family: var(--serif); font-size: 11px; fill: rgba(80, 55, 25, .7); text-anchor: middle; dominant-baseline: central; }
 .river-text {
   font-family: var(--kai);
   font-size: 30px;
@@ -210,17 +229,33 @@ footer { margin-top: 26px; font-size: .75rem; color: var(--ink-soft); letter-spa
   letter-spacing: .5em;
 }
 @media (max-width: 720px) {
-  h1 { font-size: 1.5rem; }
+  body { padding: 8px 6px 24px; }
+  .app-header { padding: 0 4px 8px; }
+  h1 { font-size: .9rem; letter-spacing: .2em; }
+  .controls { gap: 6px; }
+  .controls .lbl { display: none; }
+  select, button { font-size: .85rem; padding: 6px 9px; }
+  select { padding-right: 24px; background-position: right 8px center, 0 0; }
+  main { gap: 12px; }
+  .board-wrap { flex-basis: 100%; min-width: 0; filter: drop-shadow(0 8px 16px rgba(60, 40, 15, .25)); }
+  .panel { max-width: none; min-width: 0; padding: 0 4px; gap: 10px; }
+  .status { padding: 2px 4px; font-size: 1rem; }
   #movelist { max-height: 220px; }
+}
+@media (max-width: 370px) {
+  h1 { display: none; }
+  .controls { margin-left: auto; gap: 4px; }
+  select, button { padding: 6px; }
+  select { padding-right: 20px; background-position: right 6px center, 0 0; }
 }
 </style>
 </head>
 <body>
-<nav class="back"><a href="../">← 全部游戏</a></nav>
 <header class="app-header">
-  <h1>象棋<span class="sub">XIANGQI</span></h1>
+  <a class="back" href="../" aria-label="全部游戏">‹</a>
+  <h1>象棋</h1>
   <div class="controls">
-    <label>难度
+    <label><span class="lbl">难度</span>
       <select id="difficulty">
         <option value="easy">入门</option>
         <option value="normal">普通</option>
@@ -228,10 +263,12 @@ footer { margin-top: 26px; font-size: .75rem; color: var(--ink-soft); letter-spa
         <option value="master">大师</option>
       </select>
     </label>
-    <label>执子
+    <label><span class="lbl">执子</span>
       <select id="mode">
         <option value="red" selected>执红对 AI</option>
         <option value="black">执黑对 AI</option>
+        <option value="ai-red">AI 代我执红</option>
+        <option value="ai-black">AI 代我执黑</option>
         <option value="both">双人对弈</option>
       </select>
     </label>
@@ -829,7 +866,9 @@ const XQ = (() => {
   const fenAt = (ply) => (ply === 0 ? START_FEN : state.plies[ply - 1].fen);
   const positionAt = (ply) => Position.fromFen(fenAt(ply));
   const atHead = () => state.viewPly === state.plies.length;
-  const humanSide = () => (state.mode === "black" ? BLACK : RED);
+  // 触屏操作的一方；ai-* 模式下 AI 代我走下方，我摆对面（对手）的着法
+  const humanSide = () => (state.mode === "black" || state.mode === "ai-red" ? BLACK : RED);
+  const aiForMe = () => state.mode.startsWith("ai-");
 
   function gameResult() {
     const pos = positionAt(state.plies.length);
@@ -870,14 +909,23 @@ const XQ = (() => {
     el("stop", { offset: "100%", "stop-color": "#c39a63" }, grad);
     const grain = el("filter", { id: "grain", x: 0, y: 0, width: "100%", height: "100%" }, defs);
     el("feTurbulence", { type: "fractalNoise", baseFrequency: "0.012 0.15", numOctaves: 2, result: "noise" }, grain);
-    el("feColorMatrix", { in: "noise", type: "matrix", values: "0 0 0 0 0.35 0 0 0 0 0.22 0 0 0 0 0.08 0 0 0 0.06 0" }, grain);
+    el("feColorMatrix", { in: "noise", type: "matrix", values: "0 0 0 0 0.35 0 0 0 0 0.22 0 0 0 0 0.08 0 0 0 0.09 0" }, grain);
+    const frame = el("linearGradient", { id: "frame", x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
+    el("stop", { offset: "0%", "stop-color": "#8f6439" }, frame);
+    el("stop", { offset: "100%", "stop-color": "#6e4826" }, frame);
+    const face = el("radialGradient", { id: "pieceFace", cx: "42%", cy: "36%", r: "70%" }, defs);
+    el("stop", { offset: "0%", "stop-color": "#fffaf0" }, face);
+    el("stop", { offset: "60%", "stop-color": "#f4e6c8" }, face);
+    el("stop", { offset: "100%", "stop-color": "#e2c999" }, face);
 
-    el("rect", { x: 0, y: 0, width: 580, height: 640, rx: 10, fill: "url(#wood)", stroke: "#7d5633", "stroke-width": 3 }, svg);
-    el("rect", { x: 0, y: 0, width: 580, height: 640, rx: 10, filter: "url(#grain)" }, svg);
+    el("rect", { x: 0, y: 0, width: 580, height: 640, rx: 12, fill: "url(#frame)" }, svg);
+    el("rect", { x: 5, y: 5, width: 570, height: 630, rx: 8, fill: "url(#wood)" }, svg);
+    el("rect", { x: 5, y: 5, width: 570, height: 630, rx: 8, filter: "url(#grain)" }, svg);
+    el("rect", { x: 5.5, y: 5.5, width: 569, height: 629, rx: 7.5, fill: "none", stroke: "rgba(255,240,210,.35)" }, svg);
 
     gridG = el("g", { stroke: "#6b4a26", "stroke-width": 1.2, "stroke-linecap": "round" }, svg);
     const X = (c) => MARGIN + c * CELL, Y = (r) => MARGIN + r * CELL;
-    el("rect", { x: X(0) - 5, y: Y(0) - 5, width: 8 * CELL + 10, height: 9 * CELL + 10, fill: "none", "stroke-width": 2.2 }, gridG);
+    el("rect", { x: X(0) - 6, y: Y(0) - 6, width: 8 * CELL + 12, height: 9 * CELL + 12, fill: "none", "stroke-width": 2.4 }, gridG);
     for (let r = 0; r < 10; r++) el("line", { x1: X(0), y1: Y(r), x2: X(8), y2: Y(r) }, gridG);
     for (let c = 0; c < 9; c++) {
       if (c === 0 || c === 8) el("line", { x1: X(c), y1: Y(0), x2: X(c), y2: Y(9) }, gridG);
@@ -928,14 +976,32 @@ const XQ = (() => {
       const topRed = state.flip;
       const topText = topRed ? HAN[8 - c] : String(c + 1);
       const bottomText = topRed ? String(c + 1) : HAN[8 - c];
-      el("text", { x, y: MARGIN - 28, class: "board-label" }, labelsG).textContent = topText;
-      el("text", { x, y: MARGIN + 9 * CELL + 36, class: "board-label" }, labelsG).textContent = bottomText;
+      el("text", { x, y: 14, class: "board-label" }, labelsG).textContent = topText;
+      el("text", { x, y: 628.5, class: "board-label" }, labelsG).textContent = bottomText;
     }
   }
 
   // ---- 棋子模型（带身份，便于走子动画）----
   let pieces = [];      // {pc, square, alive, el}
   let squarePiece = []; // square -> piece 索引
+
+  // 楷体字形在 central 基线下普遍偏下、左右也不一，按实际字形包围盒逐字居中
+  const glyphCtx = document.createElement("canvas").getContext("2d");
+  const glyphOffsets = {};
+  function glyphOffset(ch, textEl) {
+    if (!glyphOffsets[ch]) {
+      const cs = getComputedStyle(textEl);
+      glyphCtx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      glyphCtx.textAlign = "center";
+      glyphCtx.textBaseline = "middle";
+      const m = glyphCtx.measureText(ch);
+      glyphOffsets[ch] = [
+        (m.actualBoundingBoxLeft - m.actualBoundingBoxRight) / 2,
+        (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2,
+      ];
+    }
+    return glyphOffsets[ch];
+  }
 
   function initPieces() {
     piecesG.textContent = "";
@@ -944,11 +1010,18 @@ const XQ = (() => {
     board.forEach((pc, s) => {
       if (pc === ".") return;
       const red = pc === pc.toUpperCase();
+      const ink = red ? "#a63a2a" : "#2b2620";
       const g = el("g", { class: `piece ${red ? "red" : "black"}` }, piecesG);
-      el("circle", { class: "body", r: R_PIECE, fill: "#f8f0dd", stroke: "#b89968", "stroke-width": 1.5 }, g);
-      el("circle", { class: "ring", r: R_PIECE - 4.5, fill: "none", stroke: red ? "#a63a2a" : "#2b2620", "stroke-width": 1.2 }, g);
-      const t = el("text", { fill: red ? "#a63a2a" : "#2b2620", dy: 1 }, g);
+      el("circle", { class: "shadow", r: R_PIECE, cy: 4 }, g);
+      const f = el("g", { class: "face" }, g);
+      el("circle", { r: R_PIECE, cy: 2.5, fill: "#b48a55" }, f);
+      el("circle", { class: "body", r: R_PIECE, fill: "url(#pieceFace)", stroke: "#a8844f", "stroke-width": 1 }, f);
+      el("circle", { class: "ring", r: R_PIECE - 4.5, fill: "none", stroke: ink, "stroke-width": 1.3, opacity: .85 }, f);
+      const t = el("text", { fill: ink }, f);
       t.textContent = CHARS[pc];
+      const [dx, dy] = glyphOffset(CHARS[pc], t);
+      t.setAttribute("x", dx);
+      t.setAttribute("y", dy);
       pieces.push({ pc, square: s, alive: true, el: g });
     });
   }
@@ -987,7 +1060,12 @@ const XQ = (() => {
       const m = state.plies[state.viewPly - 1].m;
       for (const s of [XQ.mvFrom(m), XQ.mvTo(m)]) {
         const [x, y] = xy((s / 9) | 0, s % 9);
-        el("rect", { x: x - 30, y: y - 30, width: 60, height: 60, rx: 8, class: "lastmove" }, overlayG);
+        const a = 29, l = 9;
+        el("path", {
+          class: "lastmove",
+          d: [[-1, -1], [1, -1], [-1, 1], [1, 1]]
+            .map(([sx, sy]) => `M ${x + sx * a} ${y + sy * (a - l)} V ${y + sy * a} H ${x + sx * (a - l)}`).join(" "),
+        }, overlayG);
       }
     }
     for (const m of state.selectedMoves) {
@@ -996,7 +1074,7 @@ const XQ = (() => {
       if (squarePiece[to] !== null) {
         el("circle", { cx: x, cy: y, r: R_PIECE + 3.5, class: "capture-ring", "pointer-events": "none" }, overlayG);
       } else {
-        el("circle", { cx: x, cy: y, r: 8, class: "dot" }, overlayG);
+        el("circle", { cx: x, cy: y, r: 7, class: "dot" }, overlayG);
       }
     }
   }
@@ -1013,7 +1091,11 @@ const XQ = (() => {
       statusEl.innerHTML = `<span class="spinner"></span>AI 思考中…`;
     } else {
       const pos = positionAt(state.viewPly);
-      statusEl.textContent = `轮到${side === RED ? "红方" : "黑方"}${pos.inCheck() ? " · 将军！" : ""}`;
+      const check = pos.inCheck() ? " · 将军！" : "";
+      const last = state.plies[state.plies.length - 1];
+      statusEl.textContent = aiForMe()
+        ? `${last ? `AI 走 ${last.notation} · ` : ""}请摆对方着法${check}`
+        : `轮到${side === RED ? "红方" : "黑方"}${check}`;
     }
   }
 
@@ -1178,8 +1260,7 @@ const XQ = (() => {
   function maybeAI() {
     if (state.result || state.mode === "both" || !atHead()) return;
     const pos = positionAt(state.plies.length);
-    const aiSide = state.mode === "red" ? BLACK : RED;
-    if (pos.sideToMove !== aiSide) return;
+    if (pos.sideToMove === humanSide()) return;
     state.thinking = true;
     renderStatus();
     const gen = state.generation;
@@ -1235,7 +1316,7 @@ const XQ = (() => {
     state.selected = null;
     state.selectedMoves = [];
     state.mode = modeSel.value;
-    state.flip = state.mode === "black";
+    state.flip = state.mode === "black" || state.mode === "ai-black";
     renderLabels();
     initPieces();
     renderAll();
