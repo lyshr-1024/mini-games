@@ -267,6 +267,7 @@ const MJ = (() => {
     const t = st.wall.pop()
     st.players[s].hand.push(t)
     st.players[s].hand.sort(byNum)
+    st.players[s].skipHuUntilDraw = false
     Object.assign(st, { drawn: t, afterGang: true, turn: s, phase: 'play' })
     st.events.push({ type: 'draw', seat: s, tile: t, replacement: true })
   }
@@ -301,9 +302,9 @@ const MJ = (() => {
       if (p.won) continue
       const opts = []
       if (canHuOn(p, t)) opts.push({ type: 'hu' })
-      if (kind === 'discard' && st.wall.length && suitOf(t) !== p.que) {
+      if (kind === 'discard' && suitOf(t) !== p.que) {
         const n = p.hand.filter(x => x === t).length
-        if (n >= 3) opts.push({ type: 'gang' })
+        if (n >= 3 && st.wall.length) opts.push({ type: 'gang' })
         if (n >= 2) opts.push({ type: 'peng' })
       }
       if (opts.length) options[s] = [...opts, { type: 'pass' }]
@@ -504,6 +505,7 @@ const MJ = (() => {
     v.players.forEach((p, s) => {
       p.handCount = p.hand.length
       if (s === seat) return
+      delete p.skipHuUntilDraw
       if (v.phase !== 'ended') for (const m of p.melds) if (m.type === 'anGang') m.tile = null
       if (!p.won && v.phase !== 'ended') p.hand = null
       p.exchangeOut = null
@@ -514,7 +516,8 @@ const MJ = (() => {
       v.claim.options = seat in v.claim.options ? { [seat]: v.claim.options[seat] } : {}
       v.claim.responses = seat in v.claim.responses ? { [seat]: v.claim.responses[seat] } : {}
     }
-    v.events = v.events.map(e => (e.type === 'draw' && e.seat !== seat ? { ...e, tile: null } : e))
+    const hidden = e => e.seat !== seat && v.phase !== 'ended' && (e.type === 'draw' || (e.type === 'gang' && e.kind === 'anGang'))
+    v.events = v.events.map(e => (hidden(e) ? { ...e, tile: null } : e))
     return v
   }
 

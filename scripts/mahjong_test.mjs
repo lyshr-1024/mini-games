@@ -185,10 +185,11 @@ test('单家点炮胡：首胡者为下一局庄家', () => {
   assert.equal(st.turn, 2)
 })
 
-test('牌墙空时不能杠碰，流局并连庄', () => {
+test('牌墙空时不能杠，流局并连庄', () => {
   let st = setup(fresh(), { hands: ['1111w 222w 333w 44w 6t', '555t 666w 777w 34t 99t', '888w 999w 66t 77t 8t 2t', '11t 234t 67t 123b 456b'], que: [2, 2, 2, 0] })
   assert.ok(MJ.legalActions(st, 0).every(a => !['anGang', 'buGang'].includes(a.type)))
   st = act(st, 0, { type: 'discard', tile: T('6t') })
+  for (const s of MJ.pendingSeats(st)) st = act(st, s, { type: 'pass' })
   assert.equal(st.phase, 'ended')
   assert.equal(MJ.nextRound(st).dealer, 0)
   assert.equal(MJ.nextRound(st).round, st.round + 1)
@@ -365,4 +366,37 @@ test('大师能处理对手隐藏的暗杠', () => {
   let st = setup(fresh(), { hands: ['111w 222w 333w 44w 5t 9t 6t', '555w 666w 34t 99t', DUO[2], DUO[3]], que: DUO_QUE, melds: [[], [{ type: 'anGang', tile: T('3b'), from: null }], [], []], wall: '9b 9b 9b 1b 2b 7b 8b' })
   const a = MJAI.choose(MJ.view(st, 0), 0, MJ.legalActions(st, 0), 'master', 1, { timeMs: 100 })
   assert.ok(MJ.legalActions(st, 0).some(x => x.type === a.type && x.tile === a.tile))
+})
+
+test('视图不泄露他人暗杠事件与过手胡标记', () => {
+  let st = setup(fresh(), { hands: ['1111w 222w 333w 4w 5t 9t 6t', DUO[1], '888w 999w 66t 77t 8t 1b 2b', DUO[3]], que: [2, 2, 1, 0], wall: '9b 9b 7t' })
+  st = act(st, 0, { type: 'anGang', tile: T('1w') })
+  const v = MJ.view(st, 1)
+  assert.ok(v.events.filter(e => e.type === 'gang').every(e => e.tile == null))
+  assert.equal(MJ.view(st, 0).events.find(e => e.type === 'gang').tile, T('1w'))
+  st.players[3].skipHuUntilDraw = true
+  assert.equal(MJ.view(st, 0).players[3].skipHuUntilDraw, undefined)
+  assert.equal(MJ.view(st, 3).players[3].skipHuUntilDraw, true)
+})
+
+test('牌墙空时仍可碰，碰后打出的牌只能胡，随后流局', () => {
+  let st = setup(fresh(), { hands: ['111w 222w 333w 44w 6t 8t', '555t 666w 777w 34t 99t', '888w 999w 66t 77t 8t 2t', '11t 234t 67t 123b 456b'], que: [2, 2, 2, 0] })
+  st = act(st, 0, { type: 'discard', tile: T('6t') })
+  assert.ok(MJ.legalActions(st, 2).some(a => a.type === 'peng'))
+  assert.ok(MJ.legalActions(st, 2).every(a => a.type !== 'gang'))
+  st = act(st, 2, { type: 'peng' })
+  st = act(st, 2, { type: 'discard', tile: T('2t') })
+  for (const s of MJ.pendingSeats(st)) st = act(st, s, { type: 'pass' })
+  assert.equal(st.phase, 'ended')
+})
+
+test('杠后补牌解除过手胡', () => {
+  let st = setup(fresh(), { hands: DUO, que: DUO_QUE, wall: '9b 9b 9b 4b' })
+  st.players[2].skipHuUntilDraw = true
+  st.players[2].hand = MJ.parse('888w 999w 555t 66t 77t')
+  st = act(st, 0, { type: 'discard', tile: T('5t') })
+  st = act(st, 1, { type: 'pass' })
+  st = act(st, 3, { type: 'pass' })
+  st = act(st, 2, { type: 'gang' })
+  assert.equal(st.players[2].skipHuUntilDraw, false)
 })
