@@ -8,7 +8,8 @@ import vm from 'node:vm'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const load = f => vm.runInThisContext(readFileSync(join(root, 'web', 'mahjong', f), 'utf8'), { filename: f })
 load('engine.js')
-const { MJ } = globalThis
+load('ai.js')
+const { MJ, MJAI } = globalThis
 
 test('isWin 标准型/七对/非胡', () => {
   assert.ok(MJ.isWin(MJ.counts(MJ.parse('123w 456w 789w 111t 55t'))))
@@ -297,4 +298,40 @@ test('JSON 往返不改变对局', () => {
     const b = playRandom(seed, st => JSON.parse(JSON.stringify(st)))
     assert.deepEqual(JSON.parse(JSON.stringify(a)), JSON.parse(JSON.stringify(b)))
   }
+})
+
+function playAI(seed, levels, onStep) {
+  let st = MJ.newMatch({ seed, cap: 3 })
+  let n = 0
+  while (st.phase !== 'ended') {
+    assert.ok(n++ < 3000)
+    const s = MJ.pendingSeats(st)[0]
+    const a = MJAI.choose(MJ.view(st, s), s, MJ.legalActions(st, s), levels[s], seed * 31 + n)
+    onStep?.(st, s, a)
+    st = MJ.apply(st, s, a)
+  }
+  return st
+}
+const avgHero = (hero, rest, seeds) => seeds.reduce((a, seed) => {
+  const h = seed % 4
+  return a + playAI(seed, [0, 1, 2, 3].map(s => (s === h ? hero : rest))).players[h].total
+}, 0) / seeds.length
+const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i)
+
+test('AI 整局不报错', () => {
+  for (const seed of range(1, 20)) playAI(seed, ['easy', 'normal', 'hard', ['easy', 'normal', 'hard'][seed % 3]])
+})
+
+test('有缺门牌时 AI 只打缺门', () => {
+  for (const seed of range(1, 5))
+    playAI(seed, ['easy', 'normal', 'hard', 'hard'], (st, s, a) => {
+      const p = st.players[s]
+      if (a.type === 'discard' && p.hand.some(t => MJ.suitOf(t) === p.que)) assert.equal(MJ.suitOf(a.tile), p.que)
+    })
+})
+
+test('强度梯度：普通 > 入门', () => {
+  const n = avgHero('normal', 'easy', range(1, 300))
+  console.log(`normal vs easy: ${n.toFixed(2)}`)
+  assert.ok(n > 0.5)
 })
