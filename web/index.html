@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小游戏合集</title>
+<style>
+:root {
+  --paper: #ede3cd;
+  --paper-deep: #e2d4b6;
+  --card: #f8f0dd;
+  --card-border: #d5c49d;
+  --ink: #2b2620;
+  --ink-soft: #6b6355;
+  --accent: #a63a2a;
+  --shadow: rgba(60, 40, 15, .18);
+  --serif: "Songti SC", "STSong", "Noto Serif CJK SC", "SimSun", serif;
+  --kai: "Kaiti SC", "STKaiti", "KaiTi", "BiauKai", var(--serif);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1f1b17;
+    --paper-deep: #171411;
+    --card: #2a2520;
+    --card-border: #3d352c;
+    --ink: #ece3d0;
+    --ink-soft: #a89d8a;
+    --accent: #d0644f;
+    --shadow: rgba(0, 0, 0, .45);
+  }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--serif);
+  color: var(--ink);
+  background: linear-gradient(180deg, var(--paper), var(--paper-deep));
+  min-height: 100vh;
+  padding: 48px 16px;
+}
+.wrap { width: min(960px, 100%); margin: 0 auto; }
+h1 { font-size: 2rem; letter-spacing: .3em; }
+.lead { margin-top: 8px; color: var(--ink-soft); letter-spacing: .12em; font-size: .9rem; }
+.grid {
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
+}
+.card {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  transition: transform .15s, box-shadow .15s, border-color .15s;
+}
+.card:hover, .card:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px var(--shadow);
+  border-color: var(--accent);
+  outline: none;
+}
+.cover {
+  aspect-ratio: 16 / 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cover .glyph {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--kai);
+  font-size: 44px;
+  font-weight: 700;
+  color: #a63a2a;
+  background: radial-gradient(circle at 35% 30%, #fbf3df, #e8d6ae);
+  box-shadow: inset 0 0 0 3px #f8f0dd, inset 0 0 0 5px #a63a2a, 0 6px 12px rgba(60, 40, 15, .35);
+}
+.body { padding: 14px 16px 16px; }
+.body h2 { font-size: 1.1rem; letter-spacing: .15em; }
+.body p { margin-top: 6px; font-size: .85rem; color: var(--ink-soft); line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>小游戏合集</h1>
+  <p class="lead">打开即玩，无需安装</p>
+  <div id="games" class="grid"></div>
+</div>
+<script>
+const GAMES = [
+  {
+    href: "xiangqi/",
+    name: "中国象棋",
+    desc: "人机对弈，四档难度，最高为 Fairy-Stockfish 大师级；支持双人对弈与棋谱复盘。",
+    glyph: "帥",
+    background: "linear-gradient(135deg, #d9b98c, #c6a06b)",
+  },
+];
+
+document.getElementById("games").innerHTML = GAMES.map((g) => `
+  <a class="card" href="${g.href}">
+    <div class="cover" style="background: ${g.background}"><span class="glyph">${g.glyph}</span></div>
+    <div class="body"><h2>${g.name}</h2><p>${g.desc}</p></div>
+  </a>`).join("");
+</script>
+</body>
+</html>
