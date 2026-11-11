@@ -165,6 +165,25 @@ svg.tile { display: block; flex: none; }
 #modal.open { display: flex; }
 .panel { background: #f8f0dd; color: #2b2620; border-radius: 12px; padding: 14px 18px; max-height: 360px; overflow: auto; min-width: 300px; }
 .panel h2 { font-family: var(--kai); font-size: 20px; margin-bottom: 8px; }
+.panel { width: 640px; max-height: 372px; padding: 12px 16px; }
+.panel .btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; position: sticky; bottom: -12px; background: #f8f0dd; padding: 8px 0; }
+.panel .btn { padding: 6px 16px; border-radius: 16px; background: #e2d4b6; color: #2b2620; font-size: 13px; }
+.panel .btn.pri { background: #a63a2a; color: #fff; }
+.res { display: grid; grid-template-columns: 70px 1fr 64px 60px; gap: 4px 10px; align-items: center; font-size: 12px; padding: 6px 0; border-bottom: 1px solid #e2d4b6; }
+.res .who { font-weight: 700; }
+.res .delta { font-size: 16px; font-weight: 700; text-align: right; }
+.res .up { color: #a63a2a; }
+.res .down { color: #2f6b9a; }
+.res .tot { color: #6b6355; text-align: right; }
+.res .tiles { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0; margin-top: 3px; }
+.res .tiles .meld { margin: 0 0 0 6px; }
+.res .fan { color: #6b6355; }
+.flow { font-size: 12px; color: #4a4338; margin-top: 8px; columns: 2; }
+.flow div { padding: 1px 0; break-inside: avoid; }
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid #e2d4b6; font-size: 13px; }
+.seg { display: inline-flex; border-radius: 14px; overflow: hidden; background: #e2d4b6; }
+.seg button { padding: 4px 10px; font-size: 12px; }
+.seg button.on { background: #a63a2a; color: #fff; }
 
 #rotate {
   position: fixed; inset: 0; z-index: 50; display: none;
@@ -220,8 +239,21 @@ const $ = id => document.getElementById(id)
 const T = MJTiles
 $("defs").innerHTML = T.defs()
 
+const SAVE_KEY = "mj.save"
 let settings = { ai: [null, "normal", "normal", "normal"], cap: 3, speed: 600, hintWaits: true, hintPreview: true, skipDice: false, sound: true }
-let state = MJ.newMatch({ seed: Date.now() >>> 0, cap: settings.cap })
+let state = null
+try {
+  const saved = JSON.parse(localStorage.getItem(SAVE_KEY))
+  if (saved?.settings) settings = { ...settings, ...saved.settings }
+  if (saved?.state?.players?.length === 4) state = saved.state
+} catch {}
+state ??= MJ.newMatch({ seed: Date.now() >>> 0, cap: settings.cap })
+
+function save() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ state, settings }))
+  } catch {}
+}
 let gen = 0
 let selected = []
 let aiTimer = null
@@ -469,7 +501,7 @@ function renderActions(v, legal) {
     acts.push(`<button class="act gang" data-act='${JSON.stringify(a)}'>杠${a.tile != null ? `<small>${T.name(a.tile)}</small>` : ""}</button>`)
   if (has("peng")) acts.push(`<button class="act peng" data-act='{"type":"peng"}'>碰</button>`)
   if (has("pass")) acts.push(`<button class="act pass" data-act='{"type":"pass"}'>过<small id="cd"></small></button>`)
-  if (v.phase === "ended") prompt.push(`<button class="big-btn" id="btnNext">再来一局</button>`)
+  if (v.phase === "ended") prompt.push(`<button class="big-btn" id="btnResult" style="background:radial-gradient(circle at 35% 30%,#8a8a8a,#444)">结算</button><button class="big-btn" id="btnNext">再来一局</button>`)
   $("actions").innerHTML = acts.join("")
   $("prompt").innerHTML = prompt.join("")
 }
@@ -506,7 +538,10 @@ $("hand").addEventListener("click", e => {
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-act]")
   if (b && !b.disabled) act(JSON.parse(b.dataset.act))
-  if (e.target.closest("#btnNext")) setState(MJ.nextRound(state))
+  if (e.target.closest("#btnNext")) nextRound()
+  if (e.target.closest("#btnResult")) showResult()
+  if (e.target.closest("#btnSettings")) showSettings()
+  if (e.target.closest("[data-close]")) closeModal()
 })
 
 function act(a) {
@@ -514,9 +549,10 @@ function act(a) {
   setState(MJ.apply(state, 0, a))
 }
 
-let seenEvents = 0
+let seenEvents = state.events.length
 function setState(s) {
   state = s
+  save()
   gen++
   selected = []
   if (state.events.length < seenEvents) seenEvents = 0
@@ -555,6 +591,7 @@ function rollDice(values) {
 }
 
 function onEvent(e) {
+  sound(e)
   if (e.type === "roll") rollDice(e.values)
   if (e.type === "deal") {
     wallUntil = Date.now() + (settings.skipDice ? 300 : 1400)
@@ -617,7 +654,7 @@ function aiDelay() {
 async function schedule() {
   const my = gen
   clearInterval(countdown)
-  if (state.phase === "ended") return
+  if (state.phase === "ended") return setTimeout(() => my === gen && showResult(), 1200)
   const seats = MJ.pendingSeats(state)
   if (seats.includes(0) && state.phase === "claim") startCountdown(my)
   const ai = seats.filter(s => s !== 0)
@@ -642,6 +679,138 @@ function startCountdown(my) {
   }
   tick()
   countdown = setInterval(tick, 1000)
+}
+
+function nextRound() {
+  closeModal()
+  const n = MJ.nextRound(state)
+  n.cap = settings.cap
+  setState(n)
+}
+
+function openModal(html) {
+  $("modal").innerHTML = `<div class="panel">${html}</div>`
+  $("modal").classList.add("open")
+}
+function closeModal() {
+  $("modal").classList.remove("open")
+}
+
+const LEVELS = [["easy", "入门"], ["normal", "普通"], ["hard", "较强"], ["master", "大师"]]
+const sign = n => (n > 0 ? "+" : "") + n
+
+function resultRow(v, s) {
+  const p = v.players[s]
+  const delta = MJ.ledgerSum(v.ledger, s)
+  let desc = ""
+  let extra = ""
+  if (p.won) {
+    const how = p.won.selfDrawn ? "自摸" : `${SEAT_NAMES[p.won.from]}点炮`
+    desc = `胡${ORDER_MARK[p.won.order]} ${T.name(p.won.tile)} · ${how}`
+    extra = `<div class="fan">${fanText(p.won.score)}</div>`
+  } else if (v.winOrder.length < 3) {
+    if (MJ.isHuazhu(p)) desc = "花猪"
+    else {
+      const ws = MJ.waits(p.hand, p.que)
+      desc = ws.length ? `听 ${ws.map(T.name).join(" ")}` : "未听牌"
+    }
+  }
+  const tiles = sortTiles(p.hand, p.que).map(t => T.face(t, 22)).join("") + (p.won ? `<span style="width:6px"></span>${T.face(p.won.tile, 22, "tile last")}` : "") + p.melds.map(m => meld(m, 18)).join("")
+  return `<div class="res"><div class="who">${SEAT_NAMES[s]}${v.dealer === s ? ' <span class="badge dealer" style="font-size:10px">庄</span>' : ""}</div>
+    <div><div>${desc}</div>${extra}<div class="tiles">${tiles}</div></div>
+    <div class="delta ${delta > 0 ? "up" : delta < 0 ? "down" : ""}">${sign(delta)}</div>
+    <div class="tot">累计 ${sign(p.total)}</div></div>`
+}
+
+function showResult() {
+  if (state.phase !== "ended") return
+  const v = state
+  const title = v.winOrder.length >= 3 ? `第 ${v.round + 1} 局结算` : `第 ${v.round + 1} 局结算 · 流局`
+  const flow = v.ledger.map(e => `<div>${SEAT_NAMES[e.from]} → ${SEAT_NAMES[e.to]}　${e.note}　<b>${e.amount}</b></div>`).join("")
+  openModal(`<h2>${title}</h2>${[0, 1, 2, 3].map(s => resultRow(v, s)).join("")}
+    ${flow ? `<div class="flow">${flow}</div>` : ""}
+    <div class="btns"><button class="btn" data-close>看牌桌</button><button class="btn pri" id="btnNext">再来一局</button></div>`)
+}
+
+function seg(key, options, value) {
+  return `<span class="seg">${options.map(([v, label]) => `<button class="${JSON.stringify(v) === JSON.stringify(value) ? "on" : ""}" data-set='${JSON.stringify([key, v])}'>${label}</button>`).join("")}</span>`
+}
+
+function showSettings() {
+  const rows = [1, 2, 3].map(s => `<div class="set-row"><span>${SEAT_NAMES[s]}难度</span>${seg("ai" + s, LEVELS, settings.ai[s])}</div>`)
+  rows.push(`<div class="set-row"><span>封顶（新局生效）</span>${seg("cap", [[2, "2番"], [3, "3番"], [4, "4番"], [5, "5番"], [null, "不封顶"]], settings.cap)}</div>`)
+  rows.push(`<div class="set-row"><span>听牌提示</span>${seg("hintWaits", [[true, "开"], [false, "关"]], settings.hintWaits)}</div>`)
+  rows.push(`<div class="set-row"><span>出牌预览</span>${seg("hintPreview", [[true, "开"], [false, "关"]], settings.hintPreview)}</div>`)
+  rows.push(`<div class="set-row"><span>动画速度</span>${seg("speed", [[1000, "慢"], [600, "中"], [300, "快"]], settings.speed)}</div>`)
+  rows.push(`<div class="set-row"><span>跳过骰子动画</span>${seg("skipDice", [[true, "是"], [false, "否"]], settings.skipDice)}</div>`)
+  rows.push(`<div class="set-row"><span>音效</span>${seg("sound", [[true, "开"], [false, "关"]], settings.sound)}</div>`)
+  openModal(`<h2>设置</h2>${rows.join("")}<div class="btns"><button class="btn" id="btnNewMatch">新开一场</button><button class="btn pri" data-close>完成</button></div>`)
+}
+
+$("modal").addEventListener("click", e => {
+  const b = e.target.closest("[data-set]")
+  if (b) {
+    const [key, v] = JSON.parse(b.dataset.set)
+    if (key.startsWith("ai")) settings.ai[Number(key.slice(2))] = v
+    else settings[key] = v
+    save()
+    render()
+    showSettings()
+  }
+  if (e.target.closest("#btnNewMatch") && confirm("新开一场会清空累计分，确定吗？")) {
+    closeModal()
+    seenEvents = 0
+    setState(MJ.newMatch({ seed: Date.now() >>> 0, cap: settings.cap }))
+  }
+})
+
+// ---------- 音效 ----------
+let audio = null
+addEventListener("pointerdown", () => {
+  if (!audio) try { audio = new AudioContext() } catch {}
+  audio?.resume?.()
+})
+
+function tone(freq, dur, { type = "sine", gain = 0.15, at = 0, slide = 0 } = {}) {
+  const t = audio.currentTime + at
+  const o = audio.createOscillator()
+  const g = audio.createGain()
+  o.type = type
+  o.frequency.setValueAtTime(freq, t)
+  if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, t + dur)
+  g.gain.setValueAtTime(gain, t)
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur)
+  o.connect(g).connect(audio.destination)
+  o.start(t)
+  o.stop(t + dur)
+}
+
+function click(at = 0, gain = 0.25) {
+  const t = audio.currentTime + at
+  const buf = audio.createBuffer(1, audio.sampleRate * 0.04, audio.sampleRate)
+  const d = buf.getChannelData(0)
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length) ** 3
+  const src = audio.createBufferSource()
+  const g = audio.createGain()
+  const f = audio.createBiquadFilter()
+  f.type = "bandpass"
+  f.frequency.value = 2400
+  g.gain.value = gain
+  src.buffer = buf
+  src.connect(f).connect(g).connect(audio.destination)
+  src.start(t)
+}
+
+function sound(e) {
+  if (!settings.sound || !audio || audio.state !== "running") return
+  switch (e.type) {
+    case "draw": if (e.seat === 0) click(0, 0.12); break
+    case "discard": click(0, 0.3); tone(180, 0.08, { type: "triangle", gain: 0.12 }); break
+    case "roll": for (let i = 0; i < 6; i++) click(i * 0.08, 0.2); break
+    case "peng": tone(520, 0.12, { type: "square", gain: 0.06 }); tone(780, 0.16, { type: "square", gain: 0.06, at: 0.1 }); break
+    case "gang": [440, 554, 660].forEach((f, i) => tone(f, 0.18, { type: "square", gain: 0.06, at: i * 0.08 })); break
+    case "hu": [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.35, { type: "triangle", gain: 0.12, at: i * 0.09 })); break
+  }
 }
 
 render()
