@@ -501,7 +501,7 @@ function renderActions(v, legal) {
     acts.push(`<button class="act gang" data-act='${JSON.stringify(a)}'>杠${a.tile != null ? `<small>${T.name(a.tile)}</small>` : ""}</button>`)
   if (has("peng")) acts.push(`<button class="act peng" data-act='{"type":"peng"}'>碰</button>`)
   if (has("pass")) acts.push(`<button class="act pass" data-act='{"type":"pass"}'>过<small id="cd"></small></button>`)
-  if (v.phase === "ended") prompt.push(`<button class="big-btn" id="btnResult" style="background:radial-gradient(circle at 35% 30%,#8a8a8a,#444)">结算</button><button class="big-btn" id="btnNext">再来一局</button>`)
+  if (v.phase === "ended") prompt.push(`<button class="big-btn" data-result style="background:radial-gradient(circle at 35% 30%,#8a8a8a,#444)">结算</button><button class="big-btn" data-next>再来一局</button>`)
   $("actions").innerHTML = acts.join("")
   $("prompt").innerHTML = prompt.join("")
 }
@@ -538,8 +538,8 @@ $("hand").addEventListener("click", e => {
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-act]")
   if (b && !b.disabled) act(JSON.parse(b.dataset.act))
-  if (e.target.closest("#btnNext")) nextRound()
-  if (e.target.closest("#btnResult")) showResult()
+  if (e.target.closest("[data-next]")) nextRound()
+  if (e.target.closest("[data-result]")) showResult()
   if (e.target.closest("#btnSettings")) showSettings()
   if (e.target.closest("[data-close]")) closeModal()
 })
@@ -729,7 +729,7 @@ function showResult() {
   const flow = v.ledger.map(e => `<div>${SEAT_NAMES[e.from]} → ${SEAT_NAMES[e.to]}　${e.note}　<b>${e.amount}</b></div>`).join("")
   openModal(`<h2>${title}</h2>${[0, 1, 2, 3].map(s => resultRow(v, s)).join("")}
     ${flow ? `<div class="flow">${flow}</div>` : ""}
-    <div class="btns"><button class="btn" data-close>看牌桌</button><button class="btn pri" id="btnNext">再来一局</button></div>`)
+    <div class="btns"><button class="btn" data-close>看牌桌</button><button class="btn pri" data-next>再来一局</button></div>`)
 }
 
 function seg(key, options, value) {

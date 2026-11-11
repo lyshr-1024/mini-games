@@ -18,6 +18,14 @@
 
 规则说明：长将/长捉按简化规则处理——同一局面第三次出现判和，与正式规则（长打一方判负）不同。
 
+### 四川麻将（`web/mahjong/`）
+
+- 血战到底 + 换三张 + 定缺，108 张，手机横屏为主；竖屏提示横过来
+- 掷骰定庄、开牌、定换牌方向；碰 / 直杠 / 暗杠 / 补杠，抢杠胡、杠上花、杠上炮（呼叫转移）、一炮多响、过手胡
+- 番型：平胡、对对胡、清一色、七对（龙七对）、带幺九、金钩钓、将对、根，自摸加番；封顶可设 2–5 番或不封顶
+- 流局查花猪、查大叫；结算页给出每家番型拆解与分数流水，累计分自动存档，刷新可继续
+- 听牌提示（含剩余张数）、出牌预览、能胡高亮；三家 AI 可分别设入门 / 普通 / 较强 / 大师（决定化蒙特卡洛），在 Web Worker 里运行
+
 ## 开发
 
 ### 本地预览
@@ -41,10 +49,11 @@ python3 -m http.server -d web 8000   # 打开 http://localhost:8000
 
 ```sh
 node scripts/perft_js.mjs              # 默认到 depth 4，--max-depth N 可调
+node --test scripts/mahjong_test.mjs   # 麻将：胡牌/番型/收钱/状态机/AI
 ```
 
-CI（`.github/workflows/ci.yml`）在每次 push / PR 上跑同一条命令。
+CI（`.github/workflows/ci.yml`）在每次 push / PR 上跑这两条命令。
 
 ## License
 
-MIT（Fairy-Stockfish 相关文件除外，见 `web/xiangqi/engine/Copying.txt`）
+MIT（Fairy-Stockfish 相关文件除外，见 `web/xiangqi/engine/Copying.txt`）。`web/mahjong/tiles.js` 内嵌了霞鹜文楷（LXGW WenKai）的 10 字子集，遵循 SIL Open Font License 1.1。
