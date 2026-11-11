@@ -60,20 +60,18 @@ const MJAI = (() => {
     return out
   }
 
-  function chooseDiscard(view, seat, tiles, level, rnd) {
+  function rankDiscards(view, seat, tiles, level, rnd) {
     const p = view.players[seat]
     const c = counts(p.hand)
-    if (level === 'easy' || tiles.some(t => suitOf(t) === p.que)) {
-      const ranked = tiles.map(t => [connectivity(t, c) + rnd() * 0.5, t]).sort((a, b) => a[0] - b[0])
-      return ranked[0][1]
-    }
+    if (level === 'easy' || tiles.some(t => suitOf(t) === p.que))
+      return tiles.map(t => ({ t, score: -connectivity(t, c) - rnd() * 0.5 })).sort((a, b) => b.score - a.score).map(x => x.t)
     const remain = level === 'hard' ? visibleCounts(view).map(n => 4 - n) : ownCounts(p).map(n => 4 - n)
     const danger = level === 'hard' ? threats(view, seat) : []
     const suitCount = [0, 0, 0]
     for (const t of p.hand) suitCount[suitOf(t)]++
     for (const m of p.melds) suitCount[suitOf(m.tile)] += 3
     const main = suitCount.indexOf(Math.max(...suitCount))
-    let best = null
+    const ranked = []
     for (const t of tiles) {
       const h = p.hand.slice()
       h.splice(h.indexOf(t), 1)
@@ -86,9 +84,9 @@ const MJAI = (() => {
         if (suitCount[main] >= 9 && suitOf(t) !== main) score += 200
         if (s >= 2) for (const th of danger) if (th.strong && th.suits.has(suitOf(t)) && !th.safe.has(t)) score -= 60
       }
-      if (!best || score > best.score) best = { score, t }
+      ranked.push({ t, score })
     }
-    return best.t
+    return ranked.sort((a, b) => b.score - a.score).map(x => x.t)
   }
 
   function chooseExchange(p, level, rnd) {
@@ -121,8 +119,97 @@ const MJAI = (() => {
     return after <= before
   }
 
-  function choose(view, seat, actions, level, seed) {
+  function determinize(view, seat, rnd) {
+    const st = structuredClone(view)
+    const seen = visibleCounts(view)
+    const pool = []
+    for (let t = 0; t < 27; t++) for (let k = seen[t]; k < 4; k++) pool.push(t)
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(rnd() * (i + 1))
+      ;[pool[i], pool[j]] = [pool[j], pool[i]]
+    }
+    st.players.forEach((p, s) => {
+      if (p.hand) return
+      const hand = []
+      for (let pass = 0; hand.length < p.handCount; pass++)
+        for (let i = 0; i < pool.length && hand.length < p.handCount; i++)
+          if (pass > 0 || suitOf(pool[i]) !== p.que || rnd() < 0.25) hand.push(pool.splice(i--, 1)[0])
+      p.hand = hand.sort((a, b) => a - b)
+    })
+    st.wall = pool
+    st.rng = Math.floor(rnd() * 4294967296)
+    st.events = []
+    if (st.claim) {
+      st.claim.options = MJ.claimOptions(st, st.claim.from, st.claim.tile, st.claim.kind)
+      st.claim.responses = {}
+    }
+    return st
+  }
+
+  function fastAction(st, s, rnd) {
+    const acts = MJ.legalActions(st, s)
+    if (acts.length === 1) return acts[0]
+    const pick = type => acts.find(a => a.type === type)
+    const take = pick('hu') ?? pick('gang') ?? pick('peng') ?? pick('anGang') ?? pick('buGang')
+    if (take) return take
+    const c = counts(st.players[s].hand)
+    let best = null, bv = Infinity
+    for (const a of acts) {
+      const v = connectivity(a.tile, c) + rnd()
+      if (v < bv) best = a, bv = v
+    }
+    return best
+  }
+
+  function rollout(st, seat, rnd) {
+    for (let n = 0; st.phase !== 'ended' && n < 500; n++) {
+      const s = MJ.pendingSeats(st)[0]
+      MJ.step(st, s, fastAction(st, s, rnd))
+    }
+    return MJ.ledgerSum(st.ledger, seat)
+  }
+
+  function chooseMaster(view, seat, actions, seed, timeMs) {
+    const rnd = mkRng(seed)
+    if (view.phase !== 'play' && view.phase !== 'claim') return choose(view, seat, actions, 'hard', seed)
+    const hu = actions.find(a => a.type === 'hu')
+    if (hu) return hu
+    const tiles = actions.filter(a => a.type === 'discard').map(a => a.tile)
+    const prior = choose(view, seat, actions, 'hard', seed)
+    const cands = [prior, ...actions.filter(a => a.type !== 'discard' && a !== prior)]
+    if (tiles.length) for (const tile of rankDiscards(view, seat, tiles, 'hard', rnd).slice(0, 4)) if (prior.tile !== tile || prior.type !== 'discard') cands.push({ type: 'discard', tile })
+    if (cands.length === 1) return cands[0]
+    const sums = cands.map(() => 0)
+    const sq = cands.map(() => 0)
+    const deadline = Date.now() + timeMs
+    let n = 0
+    while (Date.now() < deadline || n < 8) {
+      const world = determinize(view, seat, rnd)
+      const rs = Math.floor(rnd() * 4294967296)
+      const base = []
+      cands.forEach((a, i) => {
+        const st = structuredClone(world)
+        MJ.step(st, seat, a)
+        const v = rollout(st, seat, mkRng(rs))
+        if (i === 0) base.push(v)
+        const d = v - (i === 0 ? v : base[0])
+        sums[i] += d
+        sq[i] += d * d
+      })
+      n++
+    }
+    let best = 0
+    for (let i = 1; i < cands.length; i++) {
+      const mean = sums[i] / n
+      const se = Math.sqrt(Math.max(0, sq[i] / n - mean * mean) / n)
+      if (mean > 2 * se && mean > sums[best] / n) best = i
+    }
+    return cands[best]
+  }
+
+  function choose(view, seat, actions, level, seed, opts = {}) {
     if (actions.length === 1) return actions[0]
+    if (level === 'master') return chooseMaster(view, seat, actions, seed, opts.timeMs ?? 1500)
     const rnd = mkRng(seed)
     const p = view.players[seat]
     const find = type => actions.find(a => a.type === type)
@@ -131,13 +218,13 @@ const MJAI = (() => {
     if (find('hu')) return find('hu')
     if (view.phase === 'claim') {
       if (find('gang')) return find('gang')
-      if (find('peng') && (level !== 'hard' && level !== 'master' || pengHelps(p, view.claim.tile))) return find('peng')
+      if (find('peng') && (level !== 'hard' || pengHelps(p, view.claim.tile))) return find('peng')
       return find('pass')
     }
     const gang = find('anGang') ?? find('buGang')
     if (gang) return gang
     const tiles = actions.filter(a => a.type === 'discard').map(a => a.tile)
-    return { type: 'discard', tile: chooseDiscard(view, seat, tiles, level === 'master' ? 'hard' : level, rnd) }
+    return { type: 'discard', tile: rankDiscards(view, seat, tiles, level, rnd)[0] }
   }
 
   return { choose, visibleCounts, ukeire, connectivity }

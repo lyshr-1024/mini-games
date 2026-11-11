@@ -282,6 +282,18 @@ const MJ = (() => {
   const canHuOn = (p, t) => !p.won && !p.skipHuUntilDraw && suitOf(t) !== p.que && queClean(p) && isWin(counts(p.hand.concat([t])))
 
   function openClaim(st, from, t, kind) {
+    const options = claimOptions(st, from, t, kind)
+    if (Object.keys(options).length) {
+      st.claim = { kind, tile: t, from, options, responses: {} }
+      st.phase = 'claim'
+    } else if (kind === 'qiangGang') completeBuGang(st, from, t)
+    else {
+      st.gangFlag = null
+      advanceFrom(st, from)
+    }
+  }
+
+  function claimOptions(st, from, t, kind) {
     const options = {}
     for (let i = 1; i < 4; i++) {
       const s = (from + i) % 4
@@ -296,14 +308,7 @@ const MJ = (() => {
       }
       if (opts.length) options[s] = [...opts, { type: 'pass' }]
     }
-    if (Object.keys(options).length) {
-      st.claim = { kind, tile: t, from, options, responses: {} }
-      st.phase = 'claim'
-    } else if (kind === 'qiangGang') completeBuGang(st, from, t)
-    else {
-      st.gangFlag = null
-      advanceFrom(st, from)
-    }
+    return options
   }
 
   function resolveClaim(st) {
@@ -397,6 +402,11 @@ const MJ = (() => {
   function apply(state, seat, action) {
     if (!legalActions(state, seat).some(a => sameAction(a, action))) throw new Error(`非法动作 ${JSON.stringify(action)} @${state.phase}/${seat}`)
     const st = structuredClone(state)
+    step(st, seat, action)
+    return st
+  }
+
+  function step(st, seat, action) {
     const p = st.players[seat]
     switch (st.phase) {
       case 'dealerRoll': {
@@ -484,7 +494,6 @@ const MJ = (() => {
         }
         break
     }
-    return st
   }
 
   function view(st, seat) {
@@ -511,7 +520,7 @@ const MJ = (() => {
   return {
     SUITS, suitOf, rankOf, parse, counts, rngNext, rollDie, decompose, isWin, waits, shanten, scoreHand,
     payGang, payHu, transferGang, isHuazhu, settleDraw, ledgerSum,
-    newMatch, nextRound, pendingSeats, legalActions, apply, view,
+    newMatch, nextRound, pendingSeats, legalActions, apply, step, view, claimOptions,
   }
 })()
 

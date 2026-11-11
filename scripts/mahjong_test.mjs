@@ -335,3 +335,21 @@ test('强度梯度：普通 > 入门', () => {
   console.log(`normal vs easy: ${n.toFixed(2)}`)
   assert.ok(n > 0.5)
 })
+
+test('大师单步耗时 < 2500ms', () => {
+  let st = MJ.newMatch({ seed: 11, cap: 3 })
+  let n = 0, checked = 0
+  while (st.phase !== 'ended' && checked < 5) {
+    const s = MJ.pendingSeats(st)[0]
+    const acts = MJ.legalActions(st, s)
+    const level = s === 0 ? 'master' : 'normal'
+    const t0 = Date.now()
+    const a = MJAI.choose(MJ.view(st, s), s, acts, level, ++n, { timeMs: 1500 })
+    if (level === 'master' && st.phase === 'play' && acts.length > 1) {
+      assert.ok(Date.now() - t0 < 2500)
+      checked++
+    }
+    st = MJ.apply(st, s, a)
+  }
+  assert.ok(checked > 0)
+})
