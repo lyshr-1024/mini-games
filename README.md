@@ -8,6 +8,7 @@
 
 ### 中国象棋（`web/xiangqi/`）
 
+- 三种模式：执红对 AI / 执黑对 AI / 双人对弈；支持悔棋
 - 完整合法走法校验（蹩马腿、塞象眼、将帅照面、过河兵等），中文记谱
 - 点击选子、高亮合法落点、走子动画、将军提示；执黑时棋盘自动翻转
 - 右侧棋谱点击任意一手回退复盘，从历史续走自动分支；三次重复局面判和
@@ -28,7 +29,7 @@ python3 -m http.server -d web 8000   # 打开 http://localhost:8000
 ## 添加新游戏
 
 1. 新建 `web/<game>/index.html`，页面里放一个 `<a href="../">← 全部游戏</a>` 返回链接
-2. 在 `web/index.html` 的 `GAMES` 数组里加一项
+2. 在 `web/index.html` 的 `GAMES` 数组里加一项：`href`（如 `"<game>/"`）、`name`、`desc`、`glyph`（卡片上的大字图标）、`background`（卡片背景 CSS）
 
 推送到 `main` 后由 `.github/workflows/pages.yml` 自动部署 `web/`。
 
@@ -37,8 +38,10 @@ python3 -m http.server -d web 8000   # 打开 http://localhost:8000
 象棋引擎的走法生成用 perft（走法数统计）校验，数据在 `tests/data/perft.json`：
 
 ```sh
-node scripts/perft_js.mjs              # 默认到 depth 4
+node scripts/perft_js.mjs              # 默认到 depth 4，--max-depth N 可调
 ```
+
+CI（`.github/workflows/ci.yml`）在每次 push / PR 上跑同一条命令。
 
 ## License
 
