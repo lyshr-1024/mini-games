@@ -13,3 +13,4 @@ jobs:
         with:
           node-version: "22"
       - run: node scripts/perft_js.mjs --max-depth 4
+      - run: node --test scripts/mahjong_test.mjs
