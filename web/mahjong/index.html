@@ -113,6 +113,22 @@ svg.tile { display: block; flex: none; }
 #hand .h.sel { transform: translateY(-12px); }
 #hand .h.drawn { margin-left: 12px; }
 #hand .h.dim { filter: brightness(.6); }
+#hand .h { position: relative; }
+#hand .h.ting::after { content: ""; position: absolute; right: 3px; top: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 1px #7a5200; }
+#hint { left: 120px; bottom: 84px; font-size: 12px; display: flex; gap: 6px; align-items: center; }
+#hint .tip { background: var(--chip); padding: 3px 10px; border-radius: 10px; white-space: nowrap; }
+#hint .tip b { color: var(--gold); font-weight: 600; }
+.act.hu.glow { animation: glow 1s ease-in-out infinite alternate; transform: scale(1.12); }
+@keyframes glow { from { box-shadow: 0 0 6px 2px rgba(255, 215, 106, .6), 0 3px 0 rgba(0, 0, 0, .35) } to { box-shadow: 0 0 18px 6px rgba(255, 215, 106, .95), 0 3px 0 rgba(0, 0, 0, .35) } }
+#fan { right: 16px; bottom: 146px; font-size: 12px; background: rgba(120, 10, 10, .75); padding: 3px 10px; border-radius: 10px; white-space: nowrap; }
+#center .dice.rolling svg { animation: shake .12s linear infinite; }
+@keyframes shake { 0% { transform: rotate(-14deg) translateY(-2px) } 50% { transform: rotate(14deg) translateY(2px) } 100% { transform: rotate(-14deg) translateY(-2px) } }
+#wall { inset: 0; pointer-events: none; }
+.wall-row { position: absolute; display: flex; gap: 1px; }
+.wall-row i { width: 9px; height: 13px; border-radius: 2px; background: linear-gradient(#2d4bb8, #16287a); box-shadow: 0 2px 0 #f4f4f4; }
+.wall-row i.cut { background: none; box-shadow: none; }
+.wall-row.v { flex-direction: column; }
+.wall-row.v i { width: 13px; height: 9px; }
 #hand .melds { margin-left: 14px; }
 
 #actions { right: 16px; bottom: 88px; display: flex; gap: 8px; align-items: flex-end; }
@@ -136,7 +152,7 @@ svg.tile { display: block; flex: none; }
   box-shadow: 0 3px 0 rgba(0, 0, 0, .35);
   font-family: var(--kai); font-size: 18px; color: #fff;
 }
-#prompt { left: 50%; top: 214px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; font-size: 13px; white-space: nowrap; }
+#prompt { left: 50%; top: 226px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; font-size: 13px; white-space: nowrap; }
 #prompt .tip { background: var(--chip); padding: 4px 10px; border-radius: 10px; }
 .que-btn { padding: 8px 16px; border-radius: 18px; background: rgba(0, 0, 0, .45); font-family: var(--kai); font-size: 17px; }
 .que-btn.rec { box-shadow: 0 0 0 2px var(--gold); }
@@ -184,6 +200,9 @@ svg.tile { display: block; flex: none; }
     <div id="prompt" class="abs"></div>
     <div id="hand" class="abs row"></div>
     <div id="actions" class="abs"></div>
+    <div id="wall" class="abs"></div>
+    <div id="hint" class="abs"></div>
+    <div id="fan" class="abs" style="display:none"></div>
     <div id="toast" class="abs"></div>
     <div id="modal" class="abs"></div>
   </div>
@@ -318,6 +337,78 @@ function render() {
 
   renderHand(v)
   renderActions(v, legal)
+  renderHints(v, legal)
+  renderWall(v)
+}
+
+function remaining(v) {
+  return MJAI.visibleCounts(v).map(n => 4 - n)
+}
+
+function discardTing(v) {
+  const p = v.players[0]
+  const out = new Map()
+  for (const t of new Set(p.hand)) {
+    const h = p.hand.slice()
+    h.splice(h.indexOf(t), 1)
+    const w = MJ.waits(h, p.que)
+    if (w.length) out.set(t, w)
+  }
+  return out
+}
+
+const waitText = (ws, rem) => ws.map(t => `${T.name(t)}<b>(${Math.max(0, rem[t])})</b>`).join(" ")
+
+function huFan(v, legal) {
+  if (!legal.some(a => a.type === "hu")) return null
+  const p = v.players[0]
+  if (v.phase === "claim") {
+    return MJ.scoreHand({ hand: p.hand, melds: p.melds, winTile: v.claim.tile, flags: { gangShangPao: v.gangFlag?.seat === v.claim.from && v.claim.kind === "discard", qiangGang: v.claim.kind === "qiangGang" } }, v.cap)
+  }
+  const rest = p.hand.slice()
+  rest.splice(rest.indexOf(v.drawn), 1)
+  return MJ.scoreHand({ hand: rest, melds: p.melds, winTile: v.drawn, selfDrawn: true, flags: { gangShangHua: v.afterGang, haidi: v.wallCount === 0 } }, v.cap)
+}
+
+function fanText(r) {
+  const items = r.items.map(i => (i.name === "根" ? `根×${i.fan}` : i.name)).join(" · ")
+  return `${items} = ${r.fan} 番${r.cappedFan < r.fan ? `（封顶 ${r.cappedFan} 番）` : ""} · ${r.base} 底`
+}
+
+function renderHints(v, legal) {
+  const p = v.players[0]
+  const tips = []
+  const rem = remaining(v)
+  const queLeft = p.que != null && p.hand.some(t => MJ.suitOf(t) === p.que)
+  if (v.phase === "play" && v.turn === 0 && settings.hintPreview && selected.length === 1) {
+    const t = JSON.parse($("hand").dataset.tiles)[selected[0]]
+    const ws = discardTing(v).get(t)
+    if (ws && !queLeft) tips.push(`打${T.name(t)}听 ${waitText(ws, rem)} · 共剩 <b>${ws.reduce((a, x) => a + Math.max(0, rem[x]), 0)}</b> 张`)
+  } else if (settings.hintWaits && !p.won && p.hand.length % 3 === 1 && ["play", "claim"].includes(v.phase)) {
+    const ws = MJ.waits(p.hand, p.que)
+    if (ws.length) tips.push(`听 ${waitText(ws, rem)}`)
+  }
+  $("hint").innerHTML = tips.map(t => `<span class="tip">${t}</span>`).join("")
+  const fan = huFan(v, legal)
+  $("fan").style.display = fan ? "" : "none"
+  if (fan) $("fan").textContent = fanText(fan)
+  $("actions").querySelector(".act.hu")?.classList.add("glow")
+}
+
+const WALL_STACKS = [14, 13, 14, 13]
+let wallUntil = 0
+function renderWall(v) {
+  const show = v.phase === "break" || Date.now() < wallUntil
+  if (!show) return ($("wall").innerHTML = "")
+  const cut = v.breakAt
+  const pos = [
+    { cls: "", style: "left:50%;top:208px;transform:translateX(-50%);flex-direction:row-reverse" },
+    { cls: "v", style: "left:520px;top:50%;transform:translateY(-50%)" },
+    { cls: "", style: "left:50%;top:114px;transform:translateX(-50%)" },
+    { cls: "v", style: "left:310px;top:50%;transform:translateY(-50%);flex-direction:column-reverse" },
+  ]
+  $("wall").innerHTML = pos.map((o, s) => `<div class="wall-row ${o.cls}" style="${o.style}">${Array.from({ length: WALL_STACKS[s] }, (_, i) =>
+    `<i class="${cut && cut.wallSeat === s && i === WALL_STACKS[s] - cut.stack ? "cut" : ""}"></i>`).join("")}</div>`).join("")
 }
 
 function activeSeat(v) {
@@ -344,11 +435,13 @@ function renderHand(v) {
   const { tiles, drawn } = myTiles(v)
   const all = drawn == null ? tiles : tiles.concat([drawn])
   const queLeft = p.que != null && p.hand.some(t => MJ.suitOf(t) === p.que)
+  const tingTiles = settings.hintPreview && v.phase === "play" && v.turn === 0 && !queLeft ? new Set(discardTing(v).keys()) : new Set()
   const handHtml = all.map((t, i) => {
     const cls = ["h"]
     if (selected.includes(i)) cls.push("sel")
     if (drawn != null && i === all.length - 1) cls.push("drawn")
     if (queLeft && v.phase === "play" && MJ.suitOf(t) !== p.que) cls.push("dim")
+    if (tingTiles.has(t)) cls.push("ting")
     return `<div class="${cls.join(" ")}" data-i="${i}">${T.face(t, 46)}</div>`
   }).join("")
   const wonTile = p.won ? `<div class="h drawn">${T.face(p.won.tile, 46, "tile last")}</div>` : ""
@@ -421,12 +514,57 @@ function act(a) {
   setState(MJ.apply(state, 0, a))
 }
 
+let seenEvents = 0
 function setState(s) {
   state = s
   gen++
   selected = []
+  if (state.events.length < seenEvents) seenEvents = 0
+  const fresh = state.events.slice(seenEvents)
+  seenEvents = state.events.length
   render()
+  for (const e of fresh) onEvent(e)
   schedule()
+}
+
+const TOAST_POS = [["50%", "250px"], ["700px", "150px"], ["50%", "86px"], ["140px", "150px"]]
+function toast(seat, text) {
+  const [x, y] = TOAST_POS[seat]
+  const el = document.createElement("div")
+  el.className = "toast-msg abs"
+  el.style.cssText = `left:${x};top:${y};transform:translateX(-50%)`
+  el.textContent = text
+  $("stage").appendChild(el)
+  setTimeout(() => el.remove(), 1300)
+}
+
+function rollDice(values) {
+  const box = $("center").querySelector(".dice")
+  if (!box || settings.skipDice) return
+  box.classList.add("rolling")
+  const t0 = Date.now()
+  const spin = setInterval(() => {
+    if (Date.now() - t0 > 650) {
+      clearInterval(spin)
+      box.classList.remove("rolling")
+      box.innerHTML = values.map(n => T.die(n, 26)).join("")
+      return
+    }
+    box.innerHTML = values.map(() => T.die(1 + Math.floor(Math.random() * 6), 26)).join("")
+  }, 70)
+}
+
+function onEvent(e) {
+  if (e.type === "roll") rollDice(e.values)
+  if (e.type === "deal") {
+    wallUntil = Date.now() + (settings.skipDice ? 300 : 1400)
+    renderWall(MJ.view(state, 0))
+    setTimeout(() => renderWall(MJ.view(state, 0)), settings.skipDice ? 350 : 1450)
+  }
+  if (e.type === "peng") toast(e.seat, "碰")
+  if (e.type === "gang") toast(e.seat, e.kind === "anGang" ? "暗杠" : "杠")
+  if (e.type === "hu") toast(e.seat, e.selfDrawn ? "自摸" : "胡")
+  if (e.type === "exchange") toast(0, ["", "换给下家", "换给对家", "换给上家"][e.dir])
 }
 
 // ---------- AI 驱动 ----------
