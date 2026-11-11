@@ -187,18 +187,6 @@ svg.tile { display: block; flex: none; }
 .seg button { padding: 4px 10px; font-size: 12px; }
 .seg button.on { background: #a63a2a; color: #fff; }
 
-#rotate {
-  position: fixed; inset: 0; z-index: 50; display: none;
-  background: #0d2318; color: #fff;
-  flex-direction: column; align-items: center; justify-content: center; gap: 14px;
-  font-size: 16px; text-align: center; padding: 24px;
-}
-#rotate .ico { font-size: 48px; animation: tilt 1.6s ease-in-out infinite; }
-@keyframes tilt { 50% { transform: rotate(90deg) } }
-#rotate a { color: #ffd76a; font-size: 13px; }
-@media (orientation: portrait) and (max-width: 900px) {
-  #rotate { display: flex; }
-}
 </style>
 </head>
 <body>
@@ -228,7 +216,6 @@ svg.tile { display: block; flex: none; }
     <div id="modal" class="abs"></div>
   </div>
 </div>
-<div id="rotate"><div class="ico">📱</div><div>请把手机横过来玩</div><a href="../">← 返回全部游戏</a></div>
 
 <script src="engine.js"></script>
 <script src="ai.js"></script>
@@ -265,7 +252,9 @@ function fit() {
   const vp = getComputedStyle($("viewport"))
   const w = innerWidth - parseFloat(vp.paddingLeft) - parseFloat(vp.paddingRight) - 8
   const h = innerHeight - parseFloat(vp.paddingTop) - parseFloat(vp.paddingBottom) - 8
-  $("stage").style.transform = `scale(${Math.min(w / 844, h / 390)})`
+  const sideways = h > w
+  const k = sideways ? Math.min(h / 844, w / 390) : Math.min(w / 844, h / 390)
+  $("stage").style.transform = `${sideways ? "rotate(90deg) " : ""}scale(${k})`
 }
 addEventListener("resize", fit)
 fit()
@@ -680,8 +669,7 @@ async function schedule() {
   setState(MJ.apply(state, ai[0], a))
 }
 
-const portrait = matchMedia("(orientation: portrait) and (max-width: 900px)")
-const paused = () => document.hidden || portrait.matches
+const paused = () => document.hidden
 let cdKey = ""
 let cdLeft = 0
 function startCountdown() {
