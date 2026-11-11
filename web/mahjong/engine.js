@@ -504,6 +504,7 @@ const MJ = (() => {
     v.players.forEach((p, s) => {
       p.handCount = p.hand.length
       if (s === seat) return
+      if (v.phase !== 'ended') for (const m of p.melds) if (m.type === 'anGang') m.tile = null
       if (!p.won && v.phase !== 'ended') p.hand = null
       p.exchangeOut = null
       if (v.phase === 'que') p.que = null

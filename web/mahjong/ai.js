@@ -11,7 +11,7 @@ const MJAI = (() => {
     for (const p of view.players) {
       for (const t of p.hand ?? []) c[t]++
       for (const t of p.discards) c[t]++
-      for (const m of p.melds) c[m.tile] += m.type === 'peng' ? 3 : 4
+      for (const m of p.melds) if (m.tile != null) c[m.tile] += m.type === 'peng' ? 3 : 4
       if (p.won) c[p.won.tile]++
     }
     return c
@@ -128,6 +128,14 @@ const MJAI = (() => {
       const j = Math.floor(rnd() * (i + 1))
       ;[pool[i], pool[j]] = [pool[j], pool[i]]
     }
+    for (const p of st.players)
+      for (const m of p.melds) {
+        if (m.tile != null) continue
+        const c = counts(pool)
+        const ok = [...Array(27).keys()].filter(t => c[t] === 4 && suitOf(t) !== p.que)
+        m.tile = ok[Math.floor(rnd() * ok.length)]
+        for (let k = 0; k < 4; k++) pool.splice(pool.indexOf(m.tile), 1)
+      }
     st.players.forEach((p, s) => {
       if (p.hand) return
       const hand = []

@@ -353,3 +353,16 @@ test('大师单步耗时 < 2500ms', () => {
   }
   assert.ok(checked > 0)
 })
+
+test('视图隐藏他人暗杠的牌', () => {
+  const st = setup(fresh(), { hands: DUO, que: DUO_QUE, melds: [[], [{ type: 'anGang', tile: T('3b'), from: null }], [], []] })
+  assert.equal(MJ.view(st, 0).players[1].melds[0].tile, null)
+  assert.equal(MJ.view(st, 1).players[1].melds[0].tile, T('3b'))
+  assert.equal(MJAI.visibleCounts(MJ.view(st, 0))[T('3b')], 0)
+})
+
+test('大师能处理对手隐藏的暗杠', () => {
+  let st = setup(fresh(), { hands: ['111w 222w 333w 44w 5t 9t 6t', '555w 666w 34t 99t', DUO[2], DUO[3]], que: DUO_QUE, melds: [[], [{ type: 'anGang', tile: T('3b'), from: null }], [], []], wall: '9b 9b 9b 1b 2b 7b 8b' })
+  const a = MJAI.choose(MJ.view(st, 0), 0, MJ.legalActions(st, 0), 'master', 1, { timeMs: 100 })
+  assert.ok(MJ.legalActions(st, 0).some(x => x.type === a.type && x.tile === a.tile))
+})
