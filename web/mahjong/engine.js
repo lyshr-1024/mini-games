@@ -106,7 +106,47 @@ const MJ = (() => {
     return s
   }
 
-  return { SUITS, suitOf, rankOf, parse, counts, rngNext, rollDie, decompose, isWin, waits, shanten }
+  const meldTiles = m => new Array(m.type === 'peng' ? 3 : 4).fill(m.tile)
+  const isYaoJiu = r => r === 1 || r === 9
+  const BONUS = [['selfDrawn', '自摸'], ['gangShangHua', '杠上花'], ['gangShangPao', '杠上炮'], ['qiangGang', '抢杠胡'], ['haidi', '海底捞月']]
+
+  function scoreHand({ hand, melds = [], winTile, selfDrawn = false, flags = {} }, cap) {
+    const c = counts(hand.concat([winTile]))
+    const all = counts(hand.concat([winTile], ...melds.map(meldTiles)))
+    const suits = new Set(all.flatMap((n, t) => (n ? [suitOf(t)] : [])))
+    const roots = all.filter(n => n === 4).length
+    const common = []
+    if (suits.size === 1) common.push({ name: '清一色', fan: 2 })
+    if (roots) common.push({ name: '根', fan: roots })
+    for (const [k, name] of BONUS) if (k === 'selfDrawn' ? selfDrawn : flags[k]) common.push({ name, fan: 1 })
+
+    const shapes = []
+    if (!melds.length && isSevenPairs(c)) shapes.push([{ name: '七对', fan: 2 }])
+    for (const d of decompose(c)) {
+      const sets = d.sets.concat(melds.map(m => ({ kind: 'pung', tile: m.tile })))
+      const items = []
+      if (sets.every(s => s.kind === 'pung')) {
+        const jiang = [d.pair, ...sets.map(s => s.tile)].every(t => [2, 5, 8].includes(rankOf(t)))
+        items.push(jiang ? { name: '将对', fan: 3 } : { name: '对对胡', fan: 1 })
+        if (hand.length === 1) items.push({ name: '金钩钓', fan: 1 })
+      }
+      const setHasYao = s => (s.kind === 'pung' ? isYaoJiu(rankOf(s.tile)) : rankOf(s.tile) === 1 || rankOf(s.tile) === 7)
+      if (isYaoJiu(rankOf(d.pair)) && sets.every(setHasYao)) items.push({ name: '带幺九', fan: 2 })
+      shapes.push(items)
+    }
+
+    let best = null
+    for (const shape of shapes) {
+      const items = shape.concat(common)
+      if (!shape.length && suits.size > 1) items.unshift({ name: '平胡', fan: 0 })
+      const fan = items.reduce((a, i) => a + i.fan, 0)
+      if (!best || fan > best.fan) best = { fan, items }
+    }
+    const cappedFan = cap == null ? best.fan : Math.min(best.fan, cap)
+    return { fan: best.fan, cappedFan, base: 2 ** cappedFan, items: best.items }
+  }
+
+  return { SUITS, suitOf, rankOf, parse, counts, rngNext, rollDie, decompose, isWin, waits, shanten, scoreHand }
 })()
 
 globalThis.MJ = MJ

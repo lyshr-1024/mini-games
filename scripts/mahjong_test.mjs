@@ -35,3 +35,38 @@ test('rng 可复现', () => {
   assert.deepEqual(ra, rb)
   assert.ok(ra.every(n => n >= 1 && n <= 6))
 })
+
+const S = (o, cap = 3) => MJ.scoreHand({ melds: [], selfDrawn: false, flags: {}, ...o, hand: MJ.parse(o.hand), winTile: MJ.parse(o.win)[0] }, cap)
+const peng = t => ({ type: 'peng', tile: MJ.parse(t)[0], from: 1 })
+
+test('番型：牌型', () => {
+  assert.equal(S({ hand: '123w 456w 789w 234t 5t', win: '5t' }).fan, 0)
+  assert.deepEqual(S({ hand: '123w 456w 789w 234t 5t', win: '5t' }).items.map(i => i.name), ['平胡'])
+  assert.equal(S({ hand: '111w 555w 999w 111t 5t', win: '5t' }).fan, 1)
+  assert.equal(S({ hand: '123w 345w 678w 999w 5w', win: '5w' }).fan, 2)
+  assert.equal(S({ hand: '11w 22w 33w 44t 55t 66t 7t', win: '7t' }).fan, 2)
+  assert.equal(S({ hand: '11w 22w 33w 44t 55t 55t 7t', win: '7t' }).fan, 3)
+  assert.equal(S({ hand: '123w 789w 111t 789t 9t', win: '9t' }).fan, 2)
+  assert.equal(S({ hand: '222w 555w 888t 222t 5t', win: '5t' }).fan, 3)
+  assert.equal(S({ hand: '3w', win: '3w', melds: ['1w', '4w', '6t', '7t'].map(peng) }).fan, 2)
+  assert.equal(S({ hand: '5t', win: '5t', melds: ['2w', '5w', '8t', '2t'].map(peng) }, null).fan, 4)
+})
+
+test('番型：加番', () => {
+  const base = { hand: '123w 456w 789w 234t 5t', win: '5t' }
+  assert.equal(S({ ...base, selfDrawn: true, flags: { gangShangHua: true } }).fan, 2)
+  assert.equal(S({ ...base, selfDrawn: true, flags: { haidi: true } }).fan, 2)
+  assert.equal(S({ ...base, flags: { gangShangPao: true } }).fan, 1)
+  assert.equal(S({ ...base, flags: { qiangGang: true } }).fan, 1)
+})
+
+test('番型：封顶', () => {
+  const o = { hand: '111w 555w 999w 3w', win: '3w', selfDrawn: true, melds: [{ type: 'anGang', tile: MJ.parse('2w')[0], from: null }] }
+  const r = S(o)
+  assert.equal(r.fan, 5)
+  assert.equal(r.cappedFan, 3)
+  assert.equal(r.base, 8)
+  const u = S(o, null)
+  assert.equal(u.cappedFan, 5)
+  assert.equal(u.base, 32)
+})
