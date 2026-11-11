@@ -18,22 +18,24 @@
 
 规则说明：长将/长捉按简化规则处理——同一局面第三次出现判和，与正式规则（长打一方判负）不同。
 
-## 本地运行
+## 开发
+
+### 本地预览
 
 ```sh
 python3 -m http.server -d web 8000   # 打开 http://localhost:8000
 ```
 
-直接双击 `web/xiangqi/index.html` 也能玩，只是没有"大师"难度。
+需要起 HTTP 服务：直接双击打开（`file://`）时 service worker 注册不了，象棋"大师"难度会退回内置 JS 引擎。
 
-## 添加新游戏
+### 添加新游戏
 
 1. 新建 `web/<game>/index.html`，页面里放一个 `<a href="../">← 全部游戏</a>` 返回链接
 2. 在 `web/index.html` 的 `GAMES` 数组里加一项：`href`（如 `"<game>/"`）、`name`、`desc`、`glyph`（卡片上的大字图标）、`background`（卡片背景 CSS）
 
 推送到 `main` 后由 `.github/workflows/pages.yml` 自动部署 `web/`。
 
-## 测试
+### 测试
 
 象棋引擎的走法生成用 perft（走法数统计）校验，数据在 `tests/data/perft.json`：
 
