@@ -124,6 +124,7 @@ svg.tile { display: block; flex: none; }
 .act.hu.glow { animation: glow 1s ease-in-out infinite alternate; transform: scale(1.12); }
 @keyframes glow { from { box-shadow: 0 0 6px 2px rgba(255, 215, 106, .6), 0 3px 0 rgba(0, 0, 0, .35) } to { box-shadow: 0 0 18px 6px rgba(255, 215, 106, .95), 0 3px 0 rgba(0, 0, 0, .35) } }
 #center .dice.rolling svg { animation: shake .12s linear infinite; }
+#center .dice.hl svg { filter: drop-shadow(0 0 4px var(--gold)) drop-shadow(0 0 2px var(--gold)); }
 @keyframes shake { 0% { transform: rotate(-14deg) translateY(-2px) } 50% { transform: rotate(14deg) translateY(2px) } 100% { transform: rotate(-14deg) translateY(-2px) } }
 #wall { inset: 0; pointer-events: none; }
 .wall-row { position: absolute; display: flex; gap: 1px; }
@@ -165,9 +166,8 @@ svg.tile { display: block; flex: none; }
 
 #modal { inset: 0; background: rgba(0, 0, 0, .55); display: none; align-items: center; justify-content: center; z-index: 10; }
 #modal.open { display: flex; }
-.panel { background: #f8f0dd; color: #2b2620; border-radius: 12px; padding: 14px 18px; max-height: 360px; overflow: auto; min-width: 300px; }
+.panel { background: #f8f0dd; color: #2b2620; border-radius: 12px; width: 640px; max-height: 372px; padding: 12px 16px; overflow: auto; }
 .panel h2 { font-family: var(--kai); font-size: 20px; margin-bottom: 8px; }
-.panel { width: 640px; max-height: 372px; padding: 12px 16px; }
 .panel .btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; position: sticky; bottom: -12px; background: #f8f0dd; padding: 8px 0; }
 .panel .btn { padding: 6px 16px; border-radius: 16px; background: #e2d4b6; color: #2b2620; font-size: 13px; }
 .panel .btn.pri { background: #a63a2a; color: #fff; }
@@ -258,7 +258,6 @@ function save() {
 }
 let gen = 0
 let selected = []
-let aiTimer = null
 let countdown = null
 
 // ---------- 布局缩放 ----------
@@ -367,8 +366,8 @@ function render() {
   $("disc0").innerHTML = discards(v, 0, 20, 12, 0)
   $("chip0").innerHTML = chip(v, 0)
 
-  const dice = v.dice ? v.dice.values.map(n => T.die(n, 26)).join("") : ""
-  $("center").innerHTML = `<div class="dice">${dice}</div>
+  const dice = v.dice ? diceHTML(v.dice.values) : ""
+  $("center").innerHTML = `<div class="${diceClass()}">${dice}</div>
     <div class="remain">剩余 <b>${v.wallCount}</b> 张</div>
     <div class="phase">${phaseText(v)}</div>
     ${[0, 1, 2, 3].map(s => `<span class="arrow a${s}${activeSeat(v) === s ? " on" : ""}"></span>`).join("")}`
@@ -409,8 +408,8 @@ function huFan(v, legal) {
 }
 
 function fanText(r) {
-  const items = r.items.map(i => (i.name === "根" ? `根×${i.fan}` : i.name)).join(" · ")
-  return `${items} = ${r.fan} 番${r.cappedFan < r.fan ? `（封顶 ${r.cappedFan} 番）` : ""} · ${r.base} 底`
+  const parts = r.items.map(i => `${i.name} ${i.fan}`).join(" + ")
+  return `${parts} = ${r.fan} 番${r.cappedFan < r.fan ? ` → 封顶 ${r.cappedFan} 番` : ""} = ${r.base} 底`
 }
 
 function renderHints(v, legal) {
@@ -504,7 +503,7 @@ function renderActions(v, legal) {
   for (const a of legal.filter(a => ["anGang", "buGang", "gang"].includes(a.type)))
     acts.push(`<button class="act gang" data-act='${JSON.stringify(a)}'>杠${a.tile != null ? `<small>${T.name(a.tile)}</small>` : ""}</button>`)
   if (has("peng")) acts.push(`<button class="act peng" data-act='{"type":"peng"}'>碰</button>`)
-  if (has("pass")) acts.push(`<button class="act pass" data-act='{"type":"pass"}'>过<small id="cd"></small></button>`)
+  if (has("pass")) acts.push(`<button class="act pass" data-act='{"type":"pass"}'>过<small id="cd">${cdLeft >= 0 ? cdLeft + "s" : ""}</small></button>`)
   if (v.phase === "ended") prompt.push(`<button class="big-btn" data-result style="background:radial-gradient(circle at 35% 30%,#8a8a8a,#444)">结算</button><button class="big-btn" data-next>再来一局</button>`)
   $("actions").innerHTML = acts.join("")
   $("prompt").innerHTML = prompt.join("")
@@ -554,11 +553,14 @@ function act(a) {
 }
 
 let seenEvents = state.events.length
+let selKey = ""
 function setState(s) {
   state = s
   save()
   gen++
-  selected = []
+  const key = state.phase + "|" + state.players[0].hand.join() + "|" + state.drawn
+  if (key !== selKey) selected = []
+  selKey = key
   if (state.events.length < seenEvents) seenEvents = 0
   const fresh = state.events.slice(seenEvents)
   seenEvents = state.events.length
@@ -578,25 +580,33 @@ function toast(seat, text) {
   setTimeout(() => el.remove(), 1300)
 }
 
-function rollDice(values) {
-  const box = $("center").querySelector(".dice")
-  if (!box || settings.skipDice) return
-  box.classList.add("rolling")
+let diceAnim = { until: 0, hl: 0 }
+function diceHTML(values) {
+  const now = Date.now()
+  if (now < diceAnim.until) return values.map(() => T.die(1 + Math.floor(Math.random() * 6), 26)).join("")
+  return values.map(n => T.die(n, 26)).join("")
+}
+function diceClass() {
+  const now = Date.now()
+  return now < diceAnim.until ? "dice rolling" : now < diceAnim.hl ? "dice hl" : "dice"
+}
+function rollDice() {
+  if (settings.skipDice) return
   const t0 = Date.now()
+  diceAnim = { until: t0 + 650, hl: t0 + 1650 }
   const spin = setInterval(() => {
-    if (Date.now() - t0 > 650) {
-      clearInterval(spin)
-      box.classList.remove("rolling")
-      box.innerHTML = values.map(n => T.die(n, 26)).join("")
-      return
+    const box = $("center").querySelector(".dice")
+    if (box && state.dice) {
+      box.className = diceClass()
+      box.innerHTML = diceHTML(state.dice.values)
     }
-    box.innerHTML = values.map(() => T.die(1 + Math.floor(Math.random() * 6), 26)).join("")
+    if (Date.now() > diceAnim.hl) clearInterval(spin)
   }, 70)
 }
 
 function onEvent(e) {
   sound(e)
-  if (e.type === "roll") rollDice(e.values)
+  if (e.type === "roll") rollDice()
   if (e.type === "deal") {
     wallUntil = Date.now() + (settings.skipDice ? 300 : 1400)
     renderWall(MJ.view(state, 0))
@@ -657,10 +667,10 @@ function aiDelay() {
 
 async function schedule() {
   const my = gen
-  clearInterval(countdown)
+  if (!(state.phase === "claim" && MJ.pendingSeats(state).includes(0))) clearInterval(countdown)
   if (state.phase === "ended") return setTimeout(() => my === gen && showResult(), 1200)
   const seats = MJ.pendingSeats(state)
-  if (seats.includes(0) && state.phase === "claim") startCountdown(my)
+  if (seats.includes(0) && state.phase === "claim") startCountdown()
   const ai = seats.filter(s => s !== 0)
   if (!ai.length) return
   const started = Date.now()
@@ -670,13 +680,23 @@ async function schedule() {
   setState(MJ.apply(state, ai[0], a))
 }
 
-function startCountdown(my) {
-  let left = 8
+const portrait = matchMedia("(orientation: portrait) and (max-width: 900px)")
+const paused = () => document.hidden || portrait.matches
+let cdKey = ""
+let cdLeft = 0
+function startCountdown() {
+  const c = state.claim
+  const key = [state.round, c.kind, c.from, c.tile, state.players[c.from].discards.length, state.wall.length].join()
+  if (key === cdKey) return
+  cdKey = key
+  cdLeft = 8
+  clearInterval(countdown)
   const tick = () => {
-    if (my !== gen) return clearInterval(countdown)
+    if (state.phase !== "claim" || !MJ.pendingSeats(state).includes(0)) return clearInterval(countdown)
     const el = $("cd")
-    if (el) el.textContent = left + "s"
-    if (left-- <= 0) {
+    if (el) el.textContent = paused() ? "暂停" : cdLeft + "s"
+    if (paused()) return
+    if (cdLeft-- <= 0) {
       clearInterval(countdown)
       act({ type: "pass" })
     }

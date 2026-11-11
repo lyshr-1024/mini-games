@@ -400,3 +400,16 @@ test('杠后补牌解除过手胡', () => {
   st = act(st, 2, { type: 'gang' })
   assert.equal(st.players[2].skipHuUntilDraw, false)
 })
+
+test('弃牌被碰/胡走后 lastDiscard 清空', () => {
+  let st = setup(fresh(), { hands: DUO, que: DUO_QUE, wall: '9b 9b 9b' })
+  st = act(st, 0, { type: 'discard', tile: T('5t') })
+  st = act(st, 1, { type: 'pass' })
+  st = act(st, 3, { type: 'pass' })
+  st = act(st, 2, { type: 'peng' })
+  assert.equal(st.lastDiscard, null)
+  let h = setup(fresh(), { hands: DUO, que: DUO_QUE, wall: '9b 9b 9b' })
+  h = act(h, 0, { type: 'discard', tile: T('5t') })
+  for (const s of MJ.pendingSeats(h)) h = act(h, s, s === 1 ? { type: 'hu' } : { type: 'pass' })
+  assert.equal(h.lastDiscard, null)
+})

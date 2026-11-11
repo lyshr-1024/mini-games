@@ -317,6 +317,7 @@ const MJ = (() => {
     const order = [1, 2, 3].map(i => (from + i) % 4).filter(s => s in responses)
     const huers = order.filter(s => responses[s].type === 'hu')
     st.claim = null
+    if (huers.length || order.some(s => responses[s].type !== 'pass')) st.lastDiscard = null
     if (huers.length) {
       if (!st.winOrder.length && huers.length > 1) st.nextDealer = from
       if (kind === 'discard') st.players[from].discards.pop()
