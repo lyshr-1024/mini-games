@@ -37,6 +37,17 @@ body {
   min-height: 100vh;
   padding: 24px 16px 40px;
 }
+.back {
+  width: min(1060px, 100%);
+  padding-bottom: 10px;
+}
+.back a {
+  font-size: .85rem;
+  letter-spacing: .12em;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+.back a:hover { color: var(--cinnabar); }
 .app-header {
   width: min(1060px, 100%);
   display: flex;
@@ -205,6 +216,7 @@ footer { margin-top: 26px; font-size: .75rem; color: var(--ink-soft); letter-spa
 </style>
 </head>
 <body>
+<nav class="back"><a href="../">← 全部游戏</a></nav>
 <header class="app-header">
   <h1>象棋<span class="sub">XIANGQI</span></h1>
   <div class="controls">

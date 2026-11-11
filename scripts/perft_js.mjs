@@ -1,4 +1,4 @@
-// 从 web/index.html 提取引擎脚本块，对共享 perft 数据做一致性校验。
+// 从 web/xiangqi/index.html 提取引擎脚本块，对共享 perft 数据做一致性校验。
 // 用法: node scripts/perft_js.mjs [--max-depth N]
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -10,10 +10,10 @@ const maxDepth = (() => {
   return i === -1 ? 4 : Number(process.argv[i + 1]);
 })();
 
-const html = readFileSync(join(root, "web", "index.html"), "utf8");
+const html = readFileSync(join(root, "web", "xiangqi", "index.html"), "utf8");
 const match = html.match(/<script id="engine">([\s\S]*?)<\/script>/);
 if (!match) {
-  console.error("web/index.html 中找不到 <script id=\"engine\"> 块");
+  console.error("web/xiangqi/index.html 中找不到 <script id=\"engine\"> 块");
   process.exit(1);
 }
 const XQ = new Function(`${match[1]}; return XQ;`)();
