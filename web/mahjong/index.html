@@ -161,15 +161,19 @@ svg.tile { display: block; flex: none; }
 .que-btn.rec { box-shadow: 0 0 0 2px var(--gold); }
 
 #toast { left: 50%; top: 116px; transform: translateX(-50%); pointer-events: none; }
+.discard-pop { pointer-events: none; transform: translate(-50%, -50%); animation: dpop 1.1s ease forwards; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .45)); z-index: 5; }
+@keyframes dpop { 0% { transform: translate(-50%, -50%) scale(.5); opacity: 0 } 12% { transform: translate(-50%, -50%) scale(1.08); opacity: 1 } 22% { transform: translate(-50%, -50%) scale(1) } 80% { opacity: 1 } 100% { opacity: 0 } }
 .toast-msg { font-family: var(--kai); font-size: 26px; color: var(--gold); text-shadow: 0 2px 4px rgba(0, 0, 0, .6); animation: pop 1.2s ease forwards; }
 @keyframes pop { 0% { transform: scale(.6); opacity: 0 } 15% { transform: scale(1.1); opacity: 1 } 80% { opacity: 1 } 100% { opacity: 0 } }
 
 #modal { inset: 0; background: rgba(0, 0, 0, .55); display: none; align-items: center; justify-content: center; z-index: 10; }
 #modal.open { display: flex; }
-.panel { background: #f8f0dd; color: #2b2620; border-radius: 12px; width: 640px; max-height: 372px; padding: 12px 16px; overflow: auto; }
+.panel { position: relative; display: flex; flex-direction: column; background: #f8f0dd; color: #2b2620; border-radius: 12px; width: 640px; max-height: 372px; padding: 12px 16px; }
+.panel .body { flex: 1; min-height: 0; overflow: auto; }
 .panel h2 { font-family: var(--kai); font-size: 20px; margin-bottom: 8px; }
-.panel .btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; position: sticky; bottom: -12px; background: #f8f0dd; padding: 8px 0; }
-.panel .btn { padding: 6px 16px; border-radius: 16px; background: #e2d4b6; color: #2b2620; font-size: 13px; }
+.panel .x { position: absolute; right: 8px; top: 6px; width: 36px; height: 36px; font-size: 24px; line-height: 1; color: #6b6355; }
+.panel .btns { display: flex; gap: 10px; justify-content: flex-end; padding-top: 10px; }
+.panel .btn { padding: 8px 18px; border-radius: 16px; background: #e2d4b6; color: #2b2620; font-size: 13px; }
 .panel .btn.pri { background: #a63a2a; color: #fff; }
 .res { display: grid; grid-template-columns: 70px 1fr 64px 60px; gap: 4px 10px; align-items: center; font-size: 12px; padding: 6px 0; border-bottom: 1px solid #e2d4b6; }
 .res .who { font-weight: 700; }
@@ -229,13 +233,15 @@ const T = MJTiles
 $("defs").innerHTML = T.defs()
 
 const SAVE_KEY = "mj.save"
-let settings = { ai: [null, "normal", "normal", "normal"], cap: 3, speed: 600, hintWaits: true, hintPreview: true, skipDice: false, sound: true }
+const SPEEDS = [[1500, "慢"], [1000, "中"], [500, "快"]]
+let settings = { ai: [null, "normal", "normal", "normal"], cap: 3, speed: 1000, hintWaits: true, hintPreview: true, skipDice: false, sound: true }
 let state = null
 try {
   const saved = JSON.parse(localStorage.getItem(SAVE_KEY))
   if (saved?.settings) settings = { ...settings, ...saved.settings }
   if (saved?.state?.players?.length === 4) state = saved.state
 } catch {}
+if (!SPEEDS.some(([v]) => v === settings.speed)) settings.speed = 1000
 state ??= MJ.newMatch({ seed: Date.now() >>> 0, cap: settings.cap })
 
 function save() {
@@ -310,8 +316,9 @@ function opponentHand(v, s, vertical) {
     const row = `<div class="row">${tiles.map(t => T.face(t, w)).join("")}</div>`
     return vertical ? rotated(row, tiles.length * w, w * 1.4, s === 3 ? 90 : -90) : row
   }
-  if (vertical) return `<div class="side-col">${Array.from({ length: p.handCount }, () => T.side()).join("")}</div>`
-  return `<div class="row">${Array.from({ length: p.handCount }, () => T.back(18)).join("")}</div>`
+  const wonTile = p.won ? T.face(p.won.tile, w, "tile last") : ""
+  if (vertical) return `<div class="side-col">${Array.from({ length: p.handCount }, () => T.side()).join("")}</div>${p.won ? rotated(wonTile, w, w * 1.4, s === 3 ? 90 : -90) : ""}`
+  return `<div class="row">${Array.from({ length: p.handCount }, () => T.back(18)).join("")}<span style="width:6px"></span>${wonTile}</div>`
 }
 
 function opponentMelds(v, s, vertical) {
@@ -465,6 +472,7 @@ function renderHand(v) {
     if (selected.includes(i)) cls.push("sel")
     if (drawn != null && i === all.length - 1) cls.push("drawn")
     if (queLeft && v.phase === "play" && MJ.suitOf(t) !== p.que) cls.push("dim")
+    if (v.phase === "exchange" && !p.exchangeOut && !exchangeable(t)) cls.push("dim")
     if (tingTiles.has(t)) cls.push("ting")
     return `<div class="${cls.join(" ")}" data-i="${i}">${T.face(t, 46)}</div>`
   }).join("")
@@ -503,6 +511,18 @@ function recommendQue(hand) {
   return n.indexOf(Math.min(...n))
 }
 
+const exchangeable = t => state.players[0].hand.filter(x => MJ.suitOf(x) === MJ.suitOf(t)).length >= 3
+
+function defaultSelection() {
+  const legal = MJ.legalActions(state, 0)
+  if (state.phase !== "exchange" || !legal.length) return []
+  const rec = MJAI.choose(MJ.view(state, 0), 0, legal, "normal", 1).tiles
+  const all = sortTiles(state.players[0].hand, null)
+  const out = []
+  for (const t of rec) out.push(all.findIndex((x, i) => x === t && !out.includes(i)))
+  return out
+}
+
 function selectedTiles() {
   const all = JSON.parse($("hand").dataset.tiles || "[]")
   return selected.map(i => all[i])
@@ -516,6 +536,7 @@ $("hand").addEventListener("click", e => {
   const all = JSON.parse($("hand").dataset.tiles)
   const legal = MJ.legalActions(state, 0)
   if (state.phase === "exchange" && legal.length) {
+    if (!exchangeable(all[i])) return
     if (selected.includes(i)) selected = selected.filter(x => x !== i)
     else if (selected.length && MJ.suitOf(all[selected[0]]) !== MJ.suitOf(all[i])) selected = [i]
     else if (selected.length < 3) selected.push(i)
@@ -534,6 +555,7 @@ document.addEventListener("click", e => {
   if (e.target.closest("[data-result]")) showResult()
   if (e.target.closest("#btnSettings")) showSettings()
   if (e.target.closest("[data-close]")) closeModal()
+  if (e.target.isConnected && $("modal").classList.contains("open") && !e.target.closest("#stage")) closeModal()
 })
 
 function act(a) {
@@ -548,7 +570,7 @@ function setState(s) {
   save()
   gen++
   const key = state.phase + "|" + state.players[0].hand.join() + "|" + state.drawn
-  if (key !== selKey) selected = []
+  if (key !== selKey) selected = defaultSelection()
   selKey = key
   if (state.events.length < seenEvents) seenEvents = 0
   const fresh = state.events.slice(seenEvents)
@@ -593,7 +615,19 @@ function rollDice() {
   }, 70)
 }
 
+const POP_POS = [[422, 250], [640, 168], [422, 104], [204, 168]]
+function popDiscard(seat, tile) {
+  const el = document.createElement("div")
+  el.className = "discard-pop abs"
+  el.style.left = POP_POS[seat][0] + "px"
+  el.style.top = POP_POS[seat][1] + "px"
+  el.innerHTML = T.face(tile, 44)
+  $("stage").appendChild(el)
+  setTimeout(() => el.remove(), 1150)
+}
+
 function onEvent(e) {
+  if (e.type === "discard") popDiscard(e.seat, e.tile)
   sound(e)
   if (e.type === "roll") rollDice()
   if (e.type === "deal") {
@@ -700,8 +734,8 @@ function nextRound() {
   setState(n)
 }
 
-function openModal(html) {
-  $("modal").innerHTML = `<div class="panel">${html}</div>`
+function openModal(body, buttons) {
+  $("modal").innerHTML = `<div class="panel"><button class="x" data-close aria-label="关闭">×</button><div class="body">${body}</div><div class="btns">${buttons}</div></div>`
   $("modal").classList.add("open")
 }
 function closeModal() {
@@ -741,7 +775,7 @@ function showResult() {
   const flow = v.ledger.map(e => `<div>${SEAT_NAMES[e.from]} → ${SEAT_NAMES[e.to]}　${e.note}　<b>${e.amount}</b></div>`).join("")
   openModal(`<h2>${title}</h2>${[0, 1, 2, 3].map(s => resultRow(v, s)).join("")}
     ${flow ? `<div class="flow">${flow}</div>` : ""}
-    <div class="btns"><button class="btn" data-close>看牌桌</button><button class="btn pri" data-next>再来一局</button></div>`)
+`, `<button class="btn" data-close>看牌桌</button><button class="btn pri" data-next>再来一局</button>`)
 }
 
 function seg(key, options, value) {
@@ -753,13 +787,14 @@ function showSettings() {
   rows.push(`<div class="set-row"><span>封顶（新局生效）</span>${seg("cap", [[2, "2番"], [3, "3番"], [4, "4番"], [5, "5番"], [null, "不封顶"]], settings.cap)}</div>`)
   rows.push(`<div class="set-row"><span>听牌提示</span>${seg("hintWaits", [[true, "开"], [false, "关"]], settings.hintWaits)}</div>`)
   rows.push(`<div class="set-row"><span>出牌预览</span>${seg("hintPreview", [[true, "开"], [false, "关"]], settings.hintPreview)}</div>`)
-  rows.push(`<div class="set-row"><span>动画速度</span>${seg("speed", [[1000, "慢"], [600, "中"], [300, "快"]], settings.speed)}</div>`)
+  rows.push(`<div class="set-row"><span>动画速度</span>${seg("speed", SPEEDS, settings.speed)}</div>`)
   rows.push(`<div class="set-row"><span>跳过骰子动画</span>${seg("skipDice", [[true, "是"], [false, "否"]], settings.skipDice)}</div>`)
   rows.push(`<div class="set-row"><span>音效</span>${seg("sound", [[true, "开"], [false, "关"]], settings.sound)}</div>`)
-  openModal(`<h2>设置</h2>${rows.join("")}<div class="btns"><button class="btn" id="btnNewMatch">新开一场</button><button class="btn pri" data-close>完成</button></div>`)
+  openModal(`<h2>设置</h2>${rows.join("")}`, `<button class="btn" id="btnNewMatch">新开一场</button><button class="btn pri" data-close>完成</button>`)
 }
 
 $("modal").addEventListener("click", e => {
+  if (e.target === $("modal")) return closeModal()
   const b = e.target.closest("[data-set]")
   if (b) {
     const [key, v] = JSON.parse(b.dataset.set)
@@ -825,6 +860,8 @@ function sound(e) {
   }
 }
 
+selected = defaultSelection()
+selKey = state.phase + "|" + state.players[0].hand.join() + "|" + state.drawn
 render()
 schedule()
 </script>

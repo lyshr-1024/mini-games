@@ -413,3 +413,16 @@ test('弃牌被碰/胡走后 lastDiscard 清空', () => {
   for (const s of MJ.pendingSeats(h)) h = act(h, s, s === 1 ? { type: 'hu' } : { type: 'pass' })
   assert.equal(h.lastDiscard, null)
 })
+
+test('胡家手牌在牌局结束前对他人不可见', () => {
+  let st = setup(fresh(), { hands: DUO, que: DUO_QUE, wall: '9b 9b 9b' })
+  st = act(st, 0, { type: 'discard', tile: T('5t') })
+  st = act(st, 1, { type: 'hu' })
+  for (const s of MJ.pendingSeats(st)) st = act(st, s, { type: 'pass' })
+  assert.ok(st.players[1].won)
+  const v = MJ.view(st, 0)
+  assert.equal(v.players[1].hand, null)
+  assert.equal(v.players[1].handCount, st.players[1].hand.length)
+  assert.equal(v.players[1].won.tile, T('5t'))
+  assert.deepEqual(MJ.view(st, 1).players[1].hand, st.players[1].hand)
+})

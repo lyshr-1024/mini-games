@@ -508,7 +508,7 @@ const MJ = (() => {
       if (s === seat) return
       delete p.skipHuUntilDraw
       if (v.phase !== 'ended') for (const m of p.melds) if (m.type === 'anGang') m.tile = null
-      if (!p.won && v.phase !== 'ended') p.hand = null
+      if (v.phase !== 'ended') p.hand = null
       p.exchangeOut = null
       if (v.phase === 'que') p.que = null
     })
