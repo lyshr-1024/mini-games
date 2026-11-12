@@ -120,7 +120,7 @@ svg.tile { display: block; flex: none; }
 #hand .h.drawn { margin-left: 12px; }
 #hand .h.dim { filter: brightness(.6); }
 #hand .h { position: relative; }
-#hand .h.ting::after { content: ""; position: absolute; right: 3px; top: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 1px #7a5200; }
+#hand .h.ting::after { content: ""; position: absolute; right: 3px; top: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 1px #7a5200; }
 #mybar { display: flex; gap: 6px; align-items: center; font-size: 12px; }
 #hint { display: flex; gap: 6px; align-items: center; }
 .col { display: flex; flex-direction: column; align-items: center; gap: 3px; transform-origin: top center; }
@@ -140,30 +140,30 @@ svg.tile { display: block; flex: none; }
 .wall-row.v i { width: 13px; height: 9px; }
 #hand .melds { margin-left: 14px; }
 
-#actions { right: 16px; bottom: 88px; display: flex; gap: 8px; align-items: flex-end; }
+#actions { right: 14px; bottom: 96px; display: flex; gap: 10px; align-items: flex-end; }
 .act {
-  width: 50px; height: 50px; border-radius: 50%;
+  width: 60px; height: 60px; border-radius: 50%;
   display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
-  font-family: var(--kai); font-size: 20px; color: #fff;
+  font-family: var(--kai); font-size: 25px; color: #fff;
   box-shadow: 0 3px 0 rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .4);
 }
-.act small { font-family: system-ui; font-size: 9px; line-height: 1; opacity: .9; }
+.act small { font-family: system-ui; font-size: 11px; line-height: 1; opacity: .9; }
 .act.peng { background: radial-gradient(circle at 35% 30%, #f2a33a, #b8670f); }
 .act.gang { background: radial-gradient(circle at 35% 30%, #a578e6, #5b2fa3); }
 .act.hu { background: radial-gradient(circle at 35% 30%, #ef5350, #9f1c1c); }
 .act.pass { background: radial-gradient(circle at 35% 30%, #8a8a8a, #444); }
-.act.ok { background: radial-gradient(circle at 35% 30%, #4caf7a, #1e6b44); width: 64px; border-radius: 25px; font-size: 16px; }
+.act.ok { background: radial-gradient(circle at 35% 30%, #4caf7a, #1e6b44); width: 80px; border-radius: 30px; font-size: 20px; }
 .act:disabled { filter: grayscale(1) brightness(.7); cursor: default; }
 
 .big-btn {
-  padding: 10px 22px; border-radius: 22px;
+  padding: 12px 28px; border-radius: 26px;
   background: radial-gradient(circle at 35% 30%, #f2a33a, #b8670f);
   box-shadow: 0 3px 0 rgba(0, 0, 0, .35);
-  font-family: var(--kai); font-size: 18px; color: #fff;
+  font-family: var(--kai); font-size: 22px; color: #fff;
 }
-#prompt { left: 50%; top: 226px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; font-size: 13px; white-space: nowrap; }
+#prompt { left: 50%; top: 226px; transform: translateX(-50%); display: flex; gap: 12px; align-items: center; font-size: 14px; white-space: nowrap; }
 #prompt .tip { background: var(--chip); padding: 4px 10px; border-radius: 10px; }
-.que-btn { padding: 8px 16px; border-radius: 18px; background: rgba(0, 0, 0, .45); font-family: var(--kai); font-size: 17px; }
+.que-btn { padding: 10px 22px; border-radius: 22px; background: rgba(0, 0, 0, .45); font-family: var(--kai); font-size: 21px; }
 .que-btn.rec { box-shadow: 0 0 0 2px var(--gold); }
 
 #toast { left: 50%; top: 116px; transform: translateX(-50%); pointer-events: none; }
@@ -230,7 +230,7 @@ svg.tile { display: block; flex: none; }
     <div id="disc1" class="abs" style="right:50px;top:72px"></div>
     <div id="center" class="abs"></div>
     <div id="disc0" class="abs" style="left:50%;top:208px;transform:translateX(-50%)"></div>
-    <div id="mybar" class="abs" style="left:12px;top:282px"><span id="chip0"></span><span id="hint"></span></div>
+    <div id="mybar" class="abs" style="left:12px;top:268px"><span id="chip0"></span><span id="hint"></span></div>
     <div id="prompt" class="abs"></div>
     <div id="hand" class="abs row"></div>
     <div id="actions" class="abs"></div>
@@ -311,7 +311,7 @@ function meld(m, w) {
   return `<div class="meld">${Array.from({ length: m.type === "peng" ? 3 : 4 }, () => T.face(m.tile, w)).join("")}</div>`
 }
 
-const COL_MAX = 194
+const COL_MAX = 178
 const roundScore = (v, s) => v.players[s].total + (v.phase === "ended" ? 0 : MJ.ledgerSum(v.ledger, s))
 
 function chip(v, s) {
@@ -494,12 +494,12 @@ function renderHand(v) {
     if (queLeft && v.phase === "play" && MJ.suitOf(t) !== p.que) cls.push("dim")
     if (v.phase === "exchange" && !p.exchangeOut && !exchangeable(t)) cls.push("dim")
     if (tingTiles.has(t)) cls.push("ting")
-    return `<div class="${cls.join(" ")}" data-i="${i}">${T.face(t, 46)}</div>`
+    return `<div class="${cls.join(" ")}" data-i="${i}">${T.face(t, 54)}</div>`
   }).join("")
-  const wonTile = p.won ? `<div class="h drawn">${T.face(p.won.tile, 46, "tile last")}</div>` : ""
+  const wonTile = p.won ? `<div class="h drawn">${T.face(p.won.tile, 54, "tile last")}</div>` : ""
   freshDraw = false
   $("hand").classList.toggle("myturn", v.phase === "play" && v.turn === 0)
-  $("hand").innerHTML = handHtml + wonTile + `<div class="melds row">${p.melds.map(m => meld(m, 32)).join("")}</div>`
+  $("hand").innerHTML = handHtml + wonTile + `<div class="melds row">${p.melds.map(m => meld(m, 38)).join("")}</div>`
   $("hand").dataset.tiles = JSON.stringify(all)
 }
 
